@@ -1,4 +1,4 @@
-export const errorParser = (error) => {
+export const parseApiError = (error) => {
   if (!error.response) {
     return "Connection failed. Please check your internet connection.";
   }
