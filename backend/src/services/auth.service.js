@@ -20,13 +20,13 @@ const authService = {
     const user = await userRepository.create({
       name,
       email,
-      passwordHash: password,
+      password,
       role,
     });
 
     const token = generateToken(user._id);
 
-    return { user, token };
+    return { user, token,role };
   },
 
   async login({ email, password }) {

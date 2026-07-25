@@ -34,7 +34,7 @@ const subscriptionSchema = new mongoose.Schema(
 
 const experienceSchema = new mongoose.Schema(
   {
-    years: { type: Number, default: 0, min: 0 },
+    years: { type: Number, default: 0, min: 0 ,max:80},
     level: {
       type: String,
       enum: ['fresher', 'junior', 'mid', 'senior', 'lead'],
@@ -61,7 +61,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
     },
-    passwordHash: {
+    password: {
       type: String,
       required: [true, 'Password is required'],
       minlength: [6, 'Password must be at least 6 characters'],
@@ -112,21 +112,20 @@ const userSchema = new mongoose.Schema(
 )
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('passwordHash')) return next()
-  this.passwordHash = await bcrypt.hash(this.passwordHash, 12)
-  next()
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return
+  this.password = await bcrypt.hash(this.password, 12)
 })
 
 // Compare password
 userSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.passwordHash)
+  return bcrypt.compare(candidatePassword, this.password)
 }
 
-// Strip passwordHash from all responses
+// Strip password from all responses
 userSchema.methods.toJSON = function () {
   const obj = this.toObject()
-  delete obj.passwordHash
+  delete obj.password
   return obj
 }
 

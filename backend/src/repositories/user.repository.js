@@ -2,7 +2,7 @@ import User from "../models/user.model.js";
 
 const userRepository = {
   async findByEmail(email) {
-    return User.findOne({ email }).select("+passwordHash");
+    return User.findOne({ email }).select("+password");
   },
 
   async findById(id) {
@@ -10,7 +10,7 @@ const userRepository = {
   },
 
   async findByIdWithPassword(id) {
-    return User.findById(id).select("+passwordHash");
+    return User.findById(id).select("+password");
   },
 
   async create(data) {
@@ -26,7 +26,7 @@ const userRepository = {
   },
 
   async findAllCandidates() {
-    return User.find({ role: "candidate" }).select("-passwordHash");
+    return User.find({ role: "candidate" }).select("-password");
   },
 
   async deleteById(id) {
