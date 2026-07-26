@@ -37,6 +37,24 @@ Request → Route → Middleware → Controller → Service → Repository → D
 
 ---
 
+## Phase Order
+
+```
+Phase 1  ✅  Scaffold + Auth
+Phase 2  ⏳  User Profile
+Phase 3  ⏳  AI Interview
+Phase 4  ⏳  ATS Resume Analyzer
+Phase 5  ⏳  Programming Assessment
+Phase 6  ⏳  Payments (Razorpay)
+Phase 7  ⏳  Admin Panel
+```
+
+> Payments come after all core features are built.
+> This way credit checks are plugged into already-working features
+> and the full payment → credit deduction flow can be tested end to end.
+
+---
+
 ## Phase 1 — Scaffold + Auth ✅
 
 ### Files Created
@@ -49,6 +67,7 @@ backend/
 │   │   │   └── auth.controller.js
 │   │   ├── middlewares/
 │   │   │   ├── auth.middleware.js
+│   │   │   ├── creditCheck.middleware.js
 │   │   │   ├── errorHandler.middleware.js
 │   │   │   ├── rateLimiter.middleware.js
 │   │   │   ├── role.middleware.js
@@ -227,31 +246,6 @@ backend/src/
 
 ---
 
-## Phase 2.5 — Payments (Razorpay) ⏳
-
-### Planned Endpoints
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | /api/v1/payments/plans | ❌ | Get available plans + pricing |
-| POST | /api/v1/payments/create-order | ✅ | Create Razorpay order |
-| POST | /api/v1/payments/verify | ✅ | Verify payment signature |
-| POST | /api/v1/payments/webhook | ❌ | Razorpay webhook handler |
-| GET | /api/v1/payments/history | ✅ | User payment history |
-| POST | /api/v1/payments/cancel | ✅ | Cancel subscription |
-
-### Planned Models
-
-```
-Payment {
-  user, razorpayOrderId, razorpayPaymentId,
-  razorpaySignature, plan, billingCycle,
-  amount, currency, status, paidAt
-}
-```
-
----
-
 ## Phase 3 — AI Interview ⏳
 
 ### Planned Endpoints
@@ -268,7 +262,7 @@ Payment {
 
 ```
 InterviewSession {
-  user, mode: 'hr'|'technical',
+  user, mode: 'hr' | 'technical',
   settings: {
     role, stack, database, addons,
     bundle, subjects, language,
@@ -276,10 +270,10 @@ InterviewSession {
     totalQuestions, estimatedMinutes
   },
   messages: [{
-    role: 'ai'|'candidate',
+    role: 'ai' | 'candidate',
     content, timedOut, responseTimeSeconds, timestamp
   }],
-  status: 'active'|'completed'|'interrupted'|'abandoned',
+  status: 'active' | 'completed' | 'interrupted' | 'abandoned',
   webcamEnabled,
   evaluation: {
     overallScore, communication, technical,
@@ -293,9 +287,9 @@ InterviewSession {
 ### Key Rules
 - Free users: 5 questions per interview
 - Pro users: 10 questions per interview
-- Questions generated one by one (adaptive, not upfront)
+- Questions generated one by one (adaptive, conversational)
 - 60 seconds per answer (enforced on frontend, flagged in backend)
-- Gemini failure → save session as 'interrupted', refund credits
+- Gemini failure → save session as 'interrupted', refund 20 credits
 
 ---
 
@@ -348,7 +342,7 @@ ProgrammingQuestion {
   title, language, difficulty, topic,
   description, sampleInput, sampleOutput,
   referenceSolution, tags, estimatedMinutes,
-  status: 'draft'|'published'|'archived',
+  status: 'draft' | 'published' | 'archived',
   showReferenceSolutionAfterSubmit,
   createdBy
 }
@@ -362,14 +356,48 @@ ProgrammingSubmission {
 ```
 
 ### Key Rules
-- Run button → Judge0 only, not saved, unlimited
-- Submit button → Gemini review only (no Judge0), saved, costs 2 credits
-- Empty submission → score 0, no Gemini call
-- Gemini unavailable → show reference solution, save failed:true
+- Run button → Judge0 only, not saved, unlimited, free
+- Submit button → Gemini review only (no Judge0 at submit), saved, costs 2 credits
+- Empty submission → score 0, no Gemini call, no credit deduction
+- Gemini unavailable → show reference solution, save aiReview.failed: true
 
 ---
 
-## Phase 6 — Admin Panel ⏳
+## Phase 6 — Payments (Razorpay) ⏳
+
+### Planned Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | /api/v1/payments/plans | ❌ | Get available plans + pricing |
+| POST | /api/v1/payments/create-order | ✅ | Create Razorpay order |
+| POST | /api/v1/payments/verify | ✅ | Verify payment + activate plan |
+| POST | /api/v1/payments/webhook | ❌ | Razorpay webhook (HMAC verified) |
+| GET | /api/v1/payments/history | ✅ | User payment history |
+| POST | /api/v1/payments/cancel | ✅ | Cancel subscription |
+
+### Planned Models
+
+```
+Payment {
+  user, razorpayOrderId, razorpayPaymentId,
+  razorpaySignature, plan, billingCycle,
+  amount, currency,
+  status: 'created' | 'paid' | 'failed' | 'refunded',
+  paidAt, createdAt
+}
+```
+
+### Key Rules
+- Payment verification via HMAC SHA256 server-side only
+- Razorpay secret never sent to frontend
+- Webhook idempotency — check if payment already processed before updating DB
+- On successful payment → call credit.service.applyProSubscription()
+- Webhook handles: payment.captured, subscription.charged, payment.failed
+
+---
+
+## Phase 7 — Admin Panel ⏳
 
 ### Planned Endpoints
 
@@ -379,10 +407,11 @@ ProgrammingSubmission {
 | DELETE | /api/v1/admin/users/:id | ✅ | admin | Delete user |
 | GET | /api/v1/admin/interviews | ✅ | admin | List all interviews |
 | GET | /api/v1/admin/analytics | ✅ | admin | Platform analytics |
-| POST | /api/v1/admin/questions | ✅ | admin | Create question |
+| POST | /api/v1/admin/questions | ✅ | admin | Create question manually |
 | PUT | /api/v1/admin/questions/:id | ✅ | admin | Edit question |
-| DELETE | /api/v1/admin/questions/:id | ✅ | admin | Delete question |
-| POST | /api/v1/admin/questions/generate | ✅ | admin | AI generate question (draft) |
+| DELETE | /api/v1/admin/questions/:id | ✅ | admin | Archive question |
+| POST | /api/v1/admin/questions/generate | ✅ | admin | AI generate question (saves as draft) |
+| PATCH | /api/v1/admin/questions/:id/publish | ✅ | admin | Publish draft question |
 
 ---
 
@@ -395,7 +424,7 @@ ProgrammingSubmission {
 | ResumeAnalysis | Phase 4 | ⏳ Pending |
 | ProgrammingQuestions | Phase 5 | ⏳ Pending |
 | ProgrammingSubmissions | Phase 5 | ⏳ Pending |
-| Payments | Phase 2.5 | ⏳ Pending |
+| Payments | Phase 6 | ⏳ Pending |
 
 ---
 
