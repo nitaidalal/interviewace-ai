@@ -135,7 +135,7 @@
 
   .input-base {
     width: 100%;
-    background-color: var(--color-surface);
+    background-color: var(--color-surface-hover);
     border: 1px solid var(--color-border);
     border-radius: 0.5rem;
     padding: 0.625rem 0.875rem;
