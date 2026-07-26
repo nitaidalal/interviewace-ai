@@ -36,6 +36,27 @@ const userRepository = {
   async promoteToAdmin(email) {
     return User.findOneAndUpdate({ email }, { role: "admin" }, { new: true });
   },
+
+  async findAllCandidates({ page = 1, limit = 20 } = {}) {
+    const skip = (page - 1) * limit;
+    const [users, total] = await Promise.all([
+      User.find({ role: "candidate" })
+        .select("-passwordHash")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments({ role: "candidate" }),
+    ]);
+    return { users, total, page, limit };
+  },
+
+  async updateAvatar(id, avatarUrl) {
+    return User.findByIdAndUpdate(id, { avatar: avatarUrl }, { new: true });
+  },
+
+  async removeAvatar(id) {
+    return User.findByIdAndUpdate(id, { avatar: null }, { new: true });
+  },
 };
 
 export default userRepository;
