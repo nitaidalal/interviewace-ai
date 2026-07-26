@@ -3,7 +3,7 @@ export const parseApiError = (error) => {
     return "Connection failed. Please check your internet connection.";
   }
 
-  const { data, status } = error;
+  const { data, status } = error.response;
 
   if (data?.message) return data.message;
 

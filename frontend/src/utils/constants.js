@@ -36,3 +36,84 @@ export const THEME = {
   LIGHT: "light",
   DARK: "dark",
 };
+
+export const PREFERRED_STACKS = [
+  "React",
+  "Next.js",
+  "Vue.js",
+  "Angular",
+  "Svelte",
+  "Node.js",
+  "Express",
+  "NestJS",
+  "FastAPI",
+  "Django",
+  "Spring Boot",
+  "Laravel",
+  "Golang",
+  "MongoDB",
+  "PostgreSQL",
+  "MySQL",
+  "TypeScript",
+  "JavaScript",
+  "Python",
+  "Java",
+  "C++",
+  "Docker",
+  "AWS",
+  "Redis",
+];
+
+export const PRICING = {
+  pro: {
+    monthly: {
+      amount: 299,
+      credits: 1500,
+      validityDays: 30,
+      label: "₹299/month",
+      perMonth: "₹299/mo",
+    },
+    sixMonths: {
+      amount: 999,
+      credits: 9000,
+      validityDays: 180,
+      label: "₹999 for 6 months",
+      perMonth: "₹166/mo effectively",
+      savings: "₹795",
+    },
+  },
+};
+
+export const NAV_LINKS = [
+  { label: "Features", href: "#features" },
+  { label: "How It Works", href: "#how-it-works" },
+  { label: "Pricing", href: "#pricing" },
+];
+
+// export const SIDEBAR_LINKS = [
+//   {
+//     label: "Dashboard",
+//     href: "/dashboard",
+//     icon: "dashboard",
+//   },
+//   {
+//     label: "AI Interview",
+//     href: "/dashboard/interview",
+//     icon: "interview",
+//   },
+//   {
+//     label: "ATS Analyzer",
+//     href: "/dashboard/ats",
+//     icon: "ats",
+//   },
+//   {
+//     label: "Practice",
+//     href: "/dashboard/programming",
+//     icon: "code",
+//   },
+//   {
+//     label: "Profile",
+//     href: "/dashboard/profile",
+//     icon: "profile",
+//   },
+// ];
