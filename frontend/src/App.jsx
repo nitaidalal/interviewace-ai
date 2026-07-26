@@ -8,7 +8,6 @@ import AppRoutes from "./routes/AppRoutes.jsx";
 const App = () => {
   const dispatch = useDispatch();
 
-  // Rehydrate auth state on every app load
   useEffect(() => {
     const initAuth = async () => {
       dispatch(setAuthLoading(true));
@@ -17,6 +16,8 @@ const App = () => {
         dispatch(setUser(res.data.data.user));
       } catch {
         dispatch(clearUser());
+      } finally {
+        dispatch(setAuthLoading(false));
       }
     };
 

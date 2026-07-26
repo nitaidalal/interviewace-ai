@@ -28,7 +28,7 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to={ROUTES.DASHBOARD} replace />;
   }
 
-  return children;
+  return children; 
 };
 
 export default ProtectedRoute;
