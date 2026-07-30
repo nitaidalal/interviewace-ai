@@ -1,4 +1,4 @@
-  import InterviewSession from "../models/InterviewSession.js";
+  import InterviewSession from "../models/interview-session.model.js";
 
 const interviewRepository = {
   async create(data) {
