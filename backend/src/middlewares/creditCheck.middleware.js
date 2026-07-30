@@ -1,6 +1,6 @@
-import asyncHandler from "../../utils/asyncHandler.js";
-import creditService from "../../services/credit.service.js";
-import { CREDIT_COSTS } from "../../utils/constants.js";
+import asyncHandler from "../utils/asyncHandler.js";
+import creditService from "../services/credit.service.js";
+import { CREDIT_COSTS } from "../utils/constants.js";
 
 /**
  * Factory function — returns middleware for a specific feature.
@@ -18,6 +18,10 @@ export const checkCredits = (feature) =>
       throw new Error(
         `Unknown feature: ${feature}. Check CREDIT_COSTS in constants.js`,
       );
+    }
+
+    if(process.env.NODE_ENV==="development" && process.env.BYPASS_CREDITS === "true") {
+      return next();
     }
 
     // Step 1 — reset daily credits if new calendar day
