@@ -32,6 +32,6 @@ export const updateProfileSchema = z.object({
 
   preferredStack: z
     .array(z.string().trim())
-    .max(10, "Cannot add more than 10 stack items")
+    .max(24, "Cannot add more than 24 stack items")
     .optional(),
 });

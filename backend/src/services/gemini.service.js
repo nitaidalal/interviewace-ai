@@ -37,11 +37,15 @@ const withRetry = async (fn, retries = 1) => {
 
 
 const generate = async (prompt) => {
-  const response = await ai.models.generateContent({
-    model: GEMINI_MODEL,
-    contents: prompt,
-  });
-  return response.text;
+  try {
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: prompt,
+    });
+    return response.text;
+  } catch (error) {
+    console.log("Error generating content:", error);
+  } 
 };
 
 

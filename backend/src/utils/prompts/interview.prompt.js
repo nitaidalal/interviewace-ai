@@ -26,12 +26,12 @@ export const buildGreeting = ({
       : `${timePerQuestion / 60} minutes`;
 
   return (
-    `Welcome ${userName}! 👋 Today we'll be conducting a ` +
+    `Welcome ${userName}! Today we'll be conducting a ` +
     `${roleDisplay} interview${stackDisplay}. ` +
     `This is a ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} difficulty session ` +
     `with ${totalQuestions} questions. ` +
     `You'll have ${timeDisplay} per question. ` +
-    `Take a breath, stay confident, and let's begin! 🚀`
+    `Take a breath, stay confident, and let's begin!`
   );
 };
 
