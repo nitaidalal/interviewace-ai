@@ -1,4 +1,4 @@
-import { Motion as Motion } from "framer-Motion";
+import { motion as Motion } from "framer-Motion";
 import { HiCheck } from "react-icons/hi";
 import { MdOutlineTimer } from "react-icons/md";
 
