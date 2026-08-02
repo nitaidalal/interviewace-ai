@@ -61,8 +61,9 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
             transition={{ delay: 0.1 }}
             className="flex items-center gap-2"
           >
-            <div className="w-7 h-7 rounded-lg bg-brand-gradient flex items-center justify-center shrink-0">
-              <HiSparkles className="text-white text-xs" />
+            <div className="w-7 h-7 rounded-lg  flex items-center justify-center shrink-0">
+              {/* <HiSparkles className="text-white text-xs" /> */}
+              <img src="/interviewAceAi-image.png" alt="ai-logo" />
             </div>
             <span className="font-bold text-sm text-gradient whitespace-nowrap">
               AceInterviewAI

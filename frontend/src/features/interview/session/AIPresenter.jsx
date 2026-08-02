@@ -54,16 +54,17 @@ const AIPresenter = ({ aiState = "idle" }) => {
           transition={
             aiState === "thinking" ? { duration: 1.5, repeat: Infinity } : {}
           }
-          className="relative z-10 w-20 h-20 rounded-full flex items-center
-            justify-center bg-brand-gradient shadow-lg"
+          className="relative z-10 w-40 h-40 rounded-full flex items-center
+            justify-center  shadow-lg"
           style={{
             boxShadow:
               aiState === "speaking"
-                ? "0 0 30px color-mix(in srgb, var(--color-primary) 40%, transparent)"
+                ? "0 0 50px color-mix(in srgb, var(--color-primary) 60%, transparent)"
                 : "0 4px 20px rgba(0,0,0,0.2)",
           }}
         >
-          <MdOutlineSmartToy size={36} className="text-white" />
+          {/* <MdOutlineSmartToy size={36} className="text-white" /> */}
+          <img src="/interviewAceAi-image.png" alt="ai-logo" />
         </Motion.div>
       </div>
 
