@@ -162,6 +162,7 @@ const useInterview = () => {
     addMessage("ai", next.content, "question");
     setCurrentQuestion(next);
     setQuestionIndex(next.index);
+    setFeedback(null); 
     clearPendingQuestion();
   }, []); // no deps — reads from ref, never stale
 
