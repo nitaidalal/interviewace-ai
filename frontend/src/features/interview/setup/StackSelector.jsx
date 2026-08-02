@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 import { HiCheck } from "react-icons/hi";
 
 const STACKS = {
@@ -79,10 +79,12 @@ const DATABASE_OPTIONS = {
   springboot: ["mysql", "postgresql"],
   fastapi: ["postgresql", "mysql"],
   django: ["postgresql", "mysql"],
+  laravel: ["mysql", "postgresql"],
+  golang: ["postgresql", "mysql"],
 };
 
 const OptionChip = ({ value, label, selected, onClick }) => (
-  <motion.button
+  <Motion.button
     type="button"
     whileTap={{ scale: 0.96 }}
     onClick={() => onClick(value)}
@@ -98,7 +100,7 @@ const OptionChip = ({ value, label, selected, onClick }) => (
   >
     {selected && <HiCheck size={14} />}
     {label}
-  </motion.button>
+  </Motion.button>
 );
 
 const StackSelector = ({ role, stack, database, subjects, onChange }) => {
@@ -163,7 +165,7 @@ const StackSelector = ({ role, stack, database, subjects, onChange }) => {
 
       {/* Database (backend only) */}
       {showDatabase && (
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -184,7 +186,7 @@ const StackSelector = ({ role, stack, database, subjects, onChange }) => {
               />
             ))}
           </div>
-        </motion.div>
+        </Motion.div>
       )}
     </div>
   );

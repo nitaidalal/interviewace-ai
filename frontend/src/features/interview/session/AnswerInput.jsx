@@ -69,7 +69,7 @@ const AnswerInput = ({
         {/* Monaco Editor */}
         <div
           className="rounded-xl overflow-hidden"
-          style={{ border: "1px solid var(--color-border)", height: "280px" }}
+          style={{ border: "1px solid var(--color-border)", height: "500px" }}
         >
           <Suspense
             fallback={
@@ -79,7 +79,7 @@ const AnswerInput = ({
             }
           >
             <MonacoEditor
-              height="280px"
+              height="500px"
               language={monacoLang}
               value={value}
               onChange={(v) => onChange(v || "")}
@@ -138,7 +138,8 @@ const AnswerInput = ({
             : "Type your answer here..."
         }
         disabled={disabled || isSpeaking}
-        rows={5}
+        rows={12}
+        spellCheck={false}
         className="input-base resize-none font-mono text-sm"
         style={{
           borderColor: isListening ? "var(--color-danger)" : undefined,

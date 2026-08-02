@@ -1,4 +1,4 @@
-import { motion as Motion} from "framer-motion";
+import { motion as Motion} from "framer-Motion";
 import { MdOutlineSmartToy } from "react-icons/md";
 import Badge from "../../../components/ui/Badge.jsx";
 
@@ -12,7 +12,7 @@ const FeedbackBubble = ({ feedback, score }) => {
   };
 
   return (
-    <motion.div
+    <Motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
@@ -52,7 +52,7 @@ const FeedbackBubble = ({ feedback, score }) => {
           {feedback}
         </p>
       </div>
-    </motion.div>
+    </Motion.div>
   );
 };
 
