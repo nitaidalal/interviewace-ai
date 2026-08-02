@@ -5,27 +5,42 @@ import ProtectedRoute from "./ProtectedRoute.jsx";
 import Spinner from "../components/ui/Spinner.jsx";
 import PublicLayout from "../components/layout/PublicLayout.jsx";
 import AppLayout from "../components/layout/AppLayout.jsx";
-
+import FocusLayout from "../components/layout/FocusLayout.jsx";
 
 const HomePage = lazy(() => import("../pages/HomePage.jsx"));
 const LoginPage = lazy(() => import("../pages/LoginPage.jsx"));
 const RegisterPage = lazy(() => import("../pages/RegisterPage.jsx"));
 const DashboardPage = lazy(() => import("../pages/DashboardPage.jsx"));
 const ProfilePage = lazy(() => import("../pages/ProfilePage.jsx"));
+const InterviewSetupPage = lazy(
+  () => import("../pages/InterviewSetupPage.jsx"),
+);
+const InterviewSessionPage = lazy(
+  () => import("../pages/InterviewSessionPage.jsx"),
+);
+const InterviewResultPage = lazy(
+  () => import("../pages/InterviewResultPage.jsx"),
+);
+const InterviewHistoryPage = lazy(
+  () => import("../pages/InterviewHistoryPage.jsx"),
+);
 
-// Placeholders for future phases
+// Placeholders — replaced in future phases
 const PlaceholderPage = ({ title }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
     <div className="text-center">
-      <p className="text-2xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
+      <p
+        className="text-2xl font-bold mb-2"
+        style={{ color: "var(--color-text-primary)" }}
+      >
         {title}
       </p>
-      <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
         Coming soon
       </p>
     </div>
   </div>
-)
+);
 
 const PageLoader = () => (
   <div
@@ -40,15 +55,14 @@ const AppRoutes = () => {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* Public home route with Navbar */}
+        {/* ── Public routes (with Navbar) ── */}
         <Route element={<PublicLayout />}>
           <Route path={ROUTES.HOME} element={<HomePage />} />
+          <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+          <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
         </Route>
 
-        <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-        <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
-
-        {/* Protected dashboard routes with Sidebar */}
+        {/* ── Dashboard routes (with Sidebar) ── */}
         <Route
           element={
             <ProtectedRoute>
@@ -59,13 +73,43 @@ const AppRoutes = () => {
           <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
           <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
           <Route
-            path={ROUTES.INTERVIEW}
-            element={<PlaceholderPage title="AI Interview — Phase 3" />}
+            path="/dashboard/interview/history"
+            element={<InterviewHistoryPage />}
           />
+
+          {/* Billing — Phase 6 */}
+          <Route
+            path={ROUTES.BILLING}
+            element={<PlaceholderPage title="Billing — Phase 6" />}
+          />
+        </Route>
+
+        {/* ── Focus routes (no Sidebar) ── */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <FocusLayout />
+            </ProtectedRoute>
+          }
+        >
+          {/* Interview */}
+          <Route path={ROUTES.INTERVIEW} element={<InterviewSetupPage />} />
+          <Route
+            path="/dashboard/interview/:id/session"
+            element={<InterviewSessionPage />}
+          />
+          <Route
+            path="/dashboard/interview/:id/result"
+            element={<InterviewResultPage />}
+          />
+
+          {/* ATS Analyzer — Phase 4 */}
           <Route
             path={ROUTES.ATS}
             element={<PlaceholderPage title="ATS Analyzer — Phase 4" />}
           />
+
+          {/* Programming — Phase 5 */}
           <Route
             path={ROUTES.PROGRAMMING}
             element={<PlaceholderPage title="Coding Practice — Phase 5" />}
