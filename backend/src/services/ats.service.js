@@ -61,10 +61,6 @@ const atsService = {
         console.error("ATS Gemini error:", {
           name: error.name,
           message: error.message,
-          stack: error.stack,
-          code: error.code,
-          status: error.status,
-          response: error.response,
         });
         if (error instanceof ApiError) throw error;
         throw new ApiError(
