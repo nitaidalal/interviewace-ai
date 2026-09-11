@@ -3,6 +3,7 @@ import geminiService from "./gemini.service.js";
 import creditService from "./credit.service.js";
 import userRepository from "../repositories/user.repository.js";
 import ApiError from "../utils/ApiError.js";
+import activityService from "./activity.service.js";
 import {
   buildGreeting,
   getCodingConfig,
@@ -59,6 +60,29 @@ const getCodingTimeLimitSeconds = (difficulty) =>
     medium: 600,
     hard: 900,
   })[difficulty] ?? 300;
+
+  const buildInterviewTitle = (settings) => {
+    if (settings.mode === "hr") return "HR / Behavioural Interview";
+
+    const roleMap = {
+      frontend: "Frontend Developer",
+      backend: "Backend Developer",
+      fullstack: "Full Stack Developer",
+      dsa: "DSA Interview",
+      core_cs: "Core CS Interview",
+    };
+
+    const role = roleMap[settings.role] ?? "Technical Interview";
+
+    const stack =
+      settings.framework ||
+      settings.stack?.replace(/_/g, " + ") ||
+      settings.bundle?.toUpperCase() ||
+      settings.dsaLanguage ||
+      "";
+
+    return stack ? `${role} — ${stack}` : role;
+  };
 
 // ─── Interview Service ────────────────────────────────────────────
 
@@ -363,6 +387,18 @@ const interviewService = {
       endedAt,
       actualDuration,
     });
+
+    const interviewTitle = buildInterviewTitle(session.settings);
+    activityService
+      .createInterviewActivity({
+        userId,
+        interviewId: sessionId,
+        title: interviewTitle,
+        score: Math.round(finalScore * 10),
+      })
+      .catch((err) => {
+        console.warn("⚠️  Failed to create interview activity:", err.message);
+      });
 
     return { evaluation: completed.evaluation, sessionId };
   },
