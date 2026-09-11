@@ -5,8 +5,8 @@ const VALID_TYPES = ["all", "interview", "resume", "programming"];
 const MAX_LIMIT = 50;
 
 const validateParams = (page, limit, type) => {
-    if (p < 1) throw new ApiError(400, "Page must be a positive integer");
     const p = parseInt(page) || 1;
+    if (p < 1) throw new ApiError(400, "Page must be a positive integer");
     const l = Math.min(parseInt(limit) || 10 , MAX_LIMIT);
     const t = VALID_TYPES.includes(type) ? type : "all";
     return { page: p, limit: l, type: t };
