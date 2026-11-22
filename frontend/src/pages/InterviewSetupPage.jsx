@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import SetupStepper from "../features/interview/setup/SetupStepper.jsx";
 import ModeSelector from "../features/interview/setup/ModeSelector.jsx";
@@ -13,6 +14,7 @@ import ResumeUpload from "../features/interview/setup/ResumeUpload.jsx";
 import InterviewSummary from "../features/interview/setup/InterviewSummary.jsx";
 import Button from "../components/ui/Button.jsx";
 import useInterview from "../hooks/useInterview.js";
+import { ROUTES } from "../utils/constants.js";
 
 const STEPS = {
   MODE: 1,
@@ -41,6 +43,7 @@ const slideVariants = {
 };
 
 const InterviewSetupPage = () => {
+  const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const isPro = user?.subscription?.plan === "pro";
   const { startInterview, status } = useInterview();
@@ -186,19 +189,27 @@ const InterviewSetupPage = () => {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1
-          className="text-2xl font-bold"
-          style={{ color: "var(--color-text-primary)" }}
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: "var(--color-text-primary)" }}
+          >
+            Setup Interview
+          </h1>
+          <p
+            className="text-sm mt-1"
+            style={{ color: "var(--color-text-secondary)" }}
+          >
+            Configure your AI mock interview session
+          </p>
+        </div>
+        <Button
+          variant="primary"
+          onClick={() => navigate(ROUTES.INTERVIEW_HISTORY)}
         >
-          Setup Interview
-        </h1>
-        <p
-          className="text-sm mt-1"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
-          Configure your AI mock interview session
-        </p>
+          View History
+        </Button>
       </div>
 
       {/* Stepper */}

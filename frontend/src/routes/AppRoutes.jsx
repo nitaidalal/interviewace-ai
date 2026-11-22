@@ -24,6 +24,8 @@ const InterviewResultPage = lazy(
 const InterviewHistoryPage = lazy(
   () => import("../pages/InterviewHistoryPage.jsx"),
 );
+const ATSPage = lazy(() => import("../pages/ATSPage.jsx"));
+
 
 // Placeholders — replaced in future phases
 const PlaceholderPage = ({ title }) => (
@@ -71,11 +73,16 @@ const AppRoutes = () => {
           }
         >
           <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
+          <Route path={ROUTES.INTERVIEW} element={<InterviewSetupPage />} />
           <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
           <Route
-            path="/dashboard/interview/history"
+            path={ROUTES.INTERVIEW_HISTORY}
             element={<InterviewHistoryPage />}
           />
+          {/* <Route
+            path="/dashboard/interview/history"
+            element={<InterviewHistoryPage />}
+          /> */}
 
           {/* Billing — Phase 6 */}
           <Route
@@ -93,7 +100,6 @@ const AppRoutes = () => {
           }
         >
           {/* Interview */}
-          <Route path={ROUTES.INTERVIEW} element={<InterviewSetupPage />} />
           <Route
             path="/dashboard/interview/:id/session"
             element={<InterviewSessionPage />}
@@ -106,7 +112,7 @@ const AppRoutes = () => {
           {/* ATS Analyzer — Phase 4 */}
           <Route
             path={ROUTES.ATS}
-            element={<PlaceholderPage title="ATS Analyzer — Phase 4" />}
+            element={<ATSPage />}
           />
 
           {/* Programming — Phase 5 */}
