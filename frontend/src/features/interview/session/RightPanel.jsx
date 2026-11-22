@@ -22,9 +22,10 @@ const RightPanel = ({
   onAnswerChange,
   onSubmit,
   feedback,
-  isListening,
+  isRecording,
+  isTranscribing,
+  audioLevel,
   isSpeaking,
-  transcript,
   isVoiceSupported,
 }) => {
   return (
@@ -69,9 +70,10 @@ const RightPanel = ({
           onAnswerChange={onAnswerChange}
           onSubmit={onSubmit}
           feedback={feedback}
-          isListening={isListening}
+          isRecording={isRecording}
+          isTranscribing={isTranscribing}
+          audioLevel={audioLevel}
           isSpeaking={isSpeaking}
-          transcript={transcript}
           isVoiceSupported={isVoiceSupported}
         />
       )}
