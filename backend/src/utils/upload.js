@@ -41,3 +41,15 @@ export const uploadResume = multer({
     fileSize: MAX_SIZE_MB * 1024 * 1024, 
   },
 }).single("resume");
+
+
+export const uploadAudio = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith("audio/")) {
+      return cb(new ApiError(400, "Only audio files are allowed"), false);
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB is plenty for a 2 minute answer
+}).single("audio");
