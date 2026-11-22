@@ -11,7 +11,7 @@ const SessionHeader = ({
   onAbandon,
   paused,
 }) => {
-  const progress = ((questionIndex - 1) / totalQuestions) * 100;
+  const progress = ((questionIndex-1 ) / totalQuestions) * 100;
 
   return (
     <div

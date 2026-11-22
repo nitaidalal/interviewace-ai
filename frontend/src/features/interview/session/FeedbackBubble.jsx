@@ -1,4 +1,4 @@
-import { motion as Motion} from "framer-Motion";
+import { motion as Motion} from "framer-motion";
 import { MdOutlineSmartToy } from "react-icons/md";
 import Badge from "../../../components/ui/Badge.jsx";
 
