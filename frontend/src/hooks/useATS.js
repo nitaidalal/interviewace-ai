@@ -1,12 +1,9 @@
 import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { analyzeResume, getATSHistory, getATSById } from "../api/atsApi.js";
 import { parseApiError } from "../utils/errorParser.js";
 
 const useATS = () => {
-  const navigate = useNavigate();
-
   const [analysis, setAnalysis] = useState(null);
   const [history, setHistory] = useState([]);
   const [total, setTotal] = useState(0);

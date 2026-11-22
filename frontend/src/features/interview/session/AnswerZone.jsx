@@ -23,9 +23,10 @@ const AnswerZone = ({
   onAnswerChange,
   onSubmit,
   feedback,
-  isListening,
+  isRecording,
+  isTranscribing,
+  audioLevel,
   isSpeaking,
-  transcript,
   isVoiceSupported,
 }) => {
   const isAnswering = zoneState === "answering";
@@ -79,9 +80,10 @@ const AnswerZone = ({
                 <AnswerInput
                   value={answer}
                   onChange={onAnswerChange}
-                  isListening={isListening}
-                  isSpeaking={isSpeakingState}
-                  transcript={transcript}
+                  isRecording={isRecording}
+                  isTranscribing={isTranscribing}
+                  audioLevel={audioLevel}
+                  isSpeaking={isSpeaking}
                   isVoiceSupported={isVoiceSupported}
                   disabled={inputDisabled}
                 />

@@ -396,6 +396,7 @@ import Spinner from '../components/ui/Spinner.jsx'
 import useInterview from '../hooks/useInterview.js'
 import useVoice from '../hooks/useVoice.js'
 import useWebcam from '../hooks/useWebcam.js'
+import useRecorder from "../hooks/useRecorder.js";
 
 /**
  * Derives the answer zone state from interview state.
@@ -422,6 +423,9 @@ const deriveZoneState = ({
   return 'answering'
 }
 
+const appendText = (base, text) =>
+  text ? `${base} ${text}`.trim() : base
+
 const InterviewSessionPage = () => {
   const { id } = useParams();
 
@@ -443,17 +447,20 @@ const InterviewSessionPage = () => {
   } = useInterview();
 
   const {
-    isListening,
     isSpeaking,
-    transcript,
-    voiceError,
     isSupported: isVoiceSupported,
-    startListening,
-    stopListening,
     speak,
     cancelSpeaking,
-    clearTranscript,
   } = useVoice();
+
+  const {
+    isRecording,
+    isTranscribing,
+    audioLevel,
+    isSupported: isRecorderSupported,
+    startRecording,
+    stopRecording,
+  } = useRecorder();
 
   const {
     videoRef,
@@ -484,7 +491,6 @@ const InterviewSessionPage = () => {
     if (!sessionId && id) fetchSession(id);
     return () => {
       stopWebcam();
-      stopListening();
       cancelSpeaking();
     };
   }, []);
@@ -557,7 +563,6 @@ const InterviewSessionPage = () => {
     prevQuestionIndex.current = currentQuestion.index;
 
     setAnswer("");
-    clearTranscript();
     setTimerKey((k) => k + 1);
     setTimerPaused(true);
     setQuestionVisible(true);
@@ -573,10 +578,10 @@ const InterviewSessionPage = () => {
 
   // ── AI state sync ─────────────────────────────────────────────
   useEffect(() => {
-    if (status === "submitting") setAiState("thinking");
+    if (status === "submitting" || isTranscribing) setAiState("thinking");
     else if (isSpeaking) setAiState("speaking");
-    else if (isListening) setAiState("listening");
-  }, [isSpeaking, isListening, status]);
+    else if (isRecording) setAiState("listening");
+  }, [isSpeaking, isRecording, isTranscribing, status]);
 
   // ── Auto-end after last question ──────────────────────────────
   useEffect(() => {
@@ -586,29 +591,24 @@ const InterviewSessionPage = () => {
   }, [isLastQuestion, status]);
 
   // ── Handlers ──────────────────────────────────────────────────
-  const submitCurrentAnswer = useCallback(async (timedOut = false) => {
+  const handleTimeout = useCallback(async () => {
     if (status === "submitting" || submitLockRef.current) return;
     submitLockRef.current = true;
 
-    let finalAnswer = answer;
     try {
-      // stopListening resolves after the browser emits its final onresult/onend.
-      if (isListening) {
-        const completedTranscript = await stopListening();
-        if (completedTranscript?.trim()) {
-          finalAnswer = completedTranscript.trim();
-        }
-      }
-
-      cancelSpeaking();
       const elapsed = Math.round(
         (Date.now() - (startTimeRef.current ?? Date.now())) / 1000,
       );
       setTimerPaused(true);
+      cancelSpeaking();
+
+      let finalAnswer = answer;
+      const transcribedAnswer = await stopRecording();
+      finalAnswer = appendText(answer, transcribedAnswer);
 
       await submitAnswer({
         answer: finalAnswer,
-        timedOut,
+        timedOut: !finalAnswer.trim(),
         responseTimeSeconds: elapsed,
         isCodingAnswer: currentQuestion?.isCodingQuestion ?? false,
       });
@@ -616,15 +616,44 @@ const InterviewSessionPage = () => {
     } finally {
       submitLockRef.current = false;
     }
-  }, [answer, currentQuestion, status, isListening, stopListening, cancelSpeaking, submitAnswer]);
+  }, [answer, currentQuestion, status, isRecording, stopRecording, cancelSpeaking, submitAnswer]);
 
-  const handleTimeout = useCallback(() => {
-    void submitCurrentAnswer(true);
-  }, [submitCurrentAnswer]);
+  const handleSubmit = useCallback(async () => {
+    if (status === "submitting" || isTranscribing || submitLockRef.current) return;
+    submitLockRef.current = true;
 
-  const handleSubmit = useCallback(() => {
-    void submitCurrentAnswer(false);
-  }, [submitCurrentAnswer]);
+    try {
+      const elapsed = Math.round(
+        (Date.now() - (startTimeRef.current ?? Date.now())) / 1000,
+      );
+      setTimerPaused(true);
+      cancelSpeaking();
+
+      let finalAnswer = answer;
+      const transcribedAnswer = await stopRecording();
+      finalAnswer = appendText(answer, transcribedAnswer);
+
+      await submitAnswer({
+        answer: finalAnswer,
+        timedOut: false,
+        responseTimeSeconds: elapsed,
+        isCodingAnswer: currentQuestion?.isCodingQuestion ?? false,
+      });
+      setAnswer("");
+    } finally {
+      submitLockRef.current = false;
+    }
+  }, [answer, currentQuestion, status, isRecording, isTranscribing, stopRecording, cancelSpeaking, submitAnswer]);
+
+  const handleStopRecording = useCallback(async () => {
+    const text = await stopRecording();
+    if (text) setAnswer((prev) => appendText(prev, text));
+  }, [stopRecording]);
+
+  const handleToggleMic = useCallback(() => {
+    if (isRecording) handleStopRecording();
+    else startRecording();
+  }, [isRecording, handleStopRecording, startRecording]);
 
   const handleToggleWebcam = useCallback(() => {
     if (webcamEnabled) stopWebcam();
@@ -709,10 +738,9 @@ const InterviewSessionPage = () => {
           webcamDenied={webcamDenied}
           webcamLoading={webcamLoading}
           onToggleWebcam={handleToggleWebcam}
-          isListening={isListening}
-          onToggleMic={() => (isListening ? stopListening() : startListening())}
-          isVoiceSupported={isVoiceSupported}
-          voiceError={voiceError}
+          isListening={isRecording}
+          onToggleMic={handleToggleMic}
+          isVoiceSupported={isRecorderSupported}
           onEndCall={() => setShowAbandon(true)}
         />
       </div>
@@ -728,29 +756,27 @@ const InterviewSessionPage = () => {
           }}
         >
           <div className="flex items-center gap-3">
-            {isVoiceSupported && (
+            {isRecorderSupported && (
               <button
                 type="button"
-                onClick={() =>
-                  isListening ? stopListening() : startListening()
-                }
+                onClick={handleToggleMic}
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium"
                 style={{
-                  color: isListening
+                  color: isRecording
                     ? "var(--color-primary)"
                     : "var(--color-text-secondary)",
                   backgroundColor: "var(--color-surface-hover)",
                 }}
                 aria-label={
-                  isListening ? "Mute microphone" : "Unmute microphone"
+                  isRecording ? "Mute microphone" : "Unmute microphone"
                 }
               >
-                {isListening ? (
+                {isRecording ? (
                   <MdOutlineMic size={17} />
                 ) : (
                   <MdOutlineMicOff size={17} />
                 )}
-                {isListening ? "Mute" : "Unmute"}
+                {isRecording ? "Mute" : "Unmute"}
               </button>
             )}
             {/* Mini AI presenter */}
@@ -804,10 +830,11 @@ const InterviewSessionPage = () => {
             onAnswerChange={setAnswer}
             onSubmit={handleSubmit}
             feedback={feedback}
-            isListening={isListening}
+            isRecording={isRecording}
+            isTranscribing={isTranscribing}
+            audioLevel={audioLevel}
             isSpeaking={isSpeaking}
-            transcript={transcript}
-            isVoiceSupported={isVoiceSupported}
+            isVoiceSupported={isRecorderSupported}
           />
         </div>
       </div>
