@@ -5,6 +5,7 @@ import atsRepository from '../repositories/ats.repository.js';
 import creditService from './credit.service.js';
 import { buildATSPrompt } from '../utils/prompts/ats.prompt.js';
 import {CREDIT_COSTS} from '../utils/constants.js';
+import activityService from "./activity.service.js";
 
 const parseJSON = (text) => {
     try {
@@ -93,6 +94,15 @@ const atsService = {
         missingKeywords: result.missingKeywords ?? [],
       });
 
+      activityService
+        .createResumeActivity({
+          userId,
+          resumeId: analysis._id,
+          score: analysis.atsScore,
+        })
+        .catch((err) => {
+          console.warn("⚠️  Failed to create resume activity:", err.message);
+        });
       return analysis;
     },
     async getHistory(userId, { page = 1, limit = 10 }) {
