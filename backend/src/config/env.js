@@ -7,9 +7,9 @@ const requiredEnvVars = [
   "CLOUDINARY_CLOUD_NAME",
   "CLOUDINARY_API_KEY",
   "CLOUDINARY_API_SECRET",
-  "JUDGE0_API_KEY",
   "ADMIN_SEED_EMAIL",
   "ADMIN_SEED_PASSWORD",
+  "DEEPGRAM_API_KEY",
 ];
 
 export const validateEnv = () => {

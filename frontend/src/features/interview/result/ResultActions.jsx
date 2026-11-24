@@ -24,7 +24,7 @@ const ResultActions = () => {
       </Button>
       <Button
         variant="secondary"
-        onClick={() => navigate("/dashboard/interview/history")}
+        onClick={() => navigate(ROUTES.INTERVIEW_HISTORY)}
         className="gap-2"
         size="lg"
       >

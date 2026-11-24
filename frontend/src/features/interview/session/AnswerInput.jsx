@@ -1,119 +1,117 @@
-import { useState, useEffect, lazy, Suspense } from "react";
-import { motion as Motion } from "framer-motion";
-import { MdOutlineSend } from "react-icons/md";
-import VoiceButton from "./VoiceButton.jsx";
-import Button from "../../../components/ui/Button.jsx";
-import Spinner from "../../../components/ui/Spinner.jsx";
+// import { useEffect } from "react";
+// import { motion } from "framer-motion";
 
-const MonacoEditor = lazy(() =>
-  import("@monaco-editor/react").then((m) => ({ default: m.default })),
-);
+// const AnswerInput = ({
+//   value,
+//   onChange,
+//   isListening,
+//   isSpeaking,
+//   transcript,
+//   isVoiceSupported,
+//   disabled,
+//   placeholder,
+// }) => {
+//   // Keep the textarea synchronized with both interim and final results.
+//   // The final result can arrive after isListening becomes false.
+//   useEffect(() => {
+//     if (transcript) onChange(transcript);
+//   }, [transcript, onChange]);
 
-const MONACO_LANGUAGES = [
-  { value: "javascript", label: "JavaScript" },
-  { value: "python", label: "Python" },
-  { value: "java", label: "Java" },
-  { value: "cpp", label: "C++" },
-];
+//   return (
+//     <div className="flex flex-col gap-3 h-full">
+//       {/* Voice unsupported warning */}
+//       {!isVoiceSupported && (
+//         <div
+//           className="text-xs px-3 py-2 rounded-lg"
+//           style={{
+//             backgroundColor:
+//               "color-mix(in srgb, var(--color-warning) 10%, transparent)",
+//             color: "var(--color-warning)",
+//           }}
+//         >
+//           Voice input unavailable. Use Chrome or Edge for voice support.
+//         </div>
+//       )}
+
+//       {/* Textarea */}
+//       <div className="relative flex-1">
+//         <textarea
+//           value={value}
+//           onChange={(e) => onChange(e.target.value)}
+//           placeholder={
+//             disabled && isSpeaking
+//               ? "AI is speaking..."
+//               : isListening
+//                 ? "🎤 Listening... speak your answer"
+//                 : placeholder || "Type your answer here..."
+//           }
+//           disabled={disabled}
+//           rows={6}
+//           className="input-base resize-none w-full h-full font-mono text-sm
+//             leading-relaxed"
+//           style={{
+//             minHeight: "160px",
+//             borderColor: isListening ? "var(--color-danger)" : undefined,
+//             opacity: disabled ? 0.6 : 1,
+//             cursor: disabled ? "not-allowed" : "text",
+//           }}
+//         />
+
+//         {/* Listening pulse indicator */}
+//         {isListening && (
+//           <motion.div
+//             initial={{ opacity: 0 }}
+//             animate={{ opacity: 1 }}
+//             className="absolute bottom-3 left-3 flex items-center gap-2 text-xs"
+//             style={{ color: "var(--color-danger)" }}
+//           >
+//             <motion.div
+//               className="w-2 h-2 rounded-full bg-red-500"
+//               animate={{ scale: [1, 1.4, 1] }}
+//               transition={{ duration: 0.8, repeat: Infinity }}
+//             />
+//             Recording — click mic to stop
+//           </motion.div>
+//         )}
+//       </div>
+
+//     </div>
+//   );
+// };
+
+// export default AnswerInput;
+
+import { motion } from "framer-motion";
+
+const WAVE_BAR_COUNT = 24;
 
 const AnswerInput = ({
-  isCoding,
-  codingLanguage,
   value,
   onChange,
-  onSubmit,
-  loading,
-  isListening,
+  isRecording,
+  isTranscribing,
+  audioLevel = 0,
   isSpeaking,
-  transcript,
-  onVoiceStart,
-  onVoiceStop,
   isVoiceSupported,
   disabled,
+  placeholder,
 }) => {
-  const [monacoLang, setMonacoLang] = useState(
-    codingLanguage?.toLowerCase() || "javascript",
-  );
+  const getPlaceholder = () => {
+    if (isTranscribing) return "Transcribing your answer...";
+    if (isRecording)
+      return "🎤 Recording... tap the stop button when you finish";
+    if (disabled && isSpeaking) return "AI is speaking...";
+    return placeholder || "Type your answer here...";
+  };
 
-  // Sync transcript to value when listening
-  useEffect(() => {
-    if (isListening && transcript) {
-      onChange(transcript);
-    }
-  }, [transcript, isListening]);
-
-  if (isCoding) {
-    return (
-      <div className="flex flex-col gap-3">
-        {/* Language selector */}
-        <div className="flex items-center justify-between">
-          <span
-            className="text-xs font-medium"
-            style={{ color: "var(--color-text-secondary)" }}
-          >
-            Language
-          </span>
-          <select
-            value={monacoLang}
-            onChange={(e) => setMonacoLang(e.target.value)}
-            className="input-base w-auto py-1 px-3 text-xs"
-          >
-            {MONACO_LANGUAGES.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Monaco Editor */}
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ border: "1px solid var(--color-border)", height: "500px" }}
-        >
-          <Suspense
-            fallback={
-              <div className="h-full flex items-center justify-center">
-                <Spinner size="md" />
-              </div>
-            }
-          >
-            <MonacoEditor
-              height="500px"
-              language={monacoLang}
-              value={value}
-              onChange={(v) => onChange(v || "")}
-              theme="vs-dark"
-              options={{
-                fontSize: 14,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                lineNumbers: "on",
-                wordWrap: "on",
-                automaticLayout: true,
-                padding: { top: 12 },
-              }}
-            />
-          </Suspense>
-        </div>
-
-        <Button
-          fullWidth
-          onClick={onSubmit}
-          loading={loading}
-          disabled={disabled || !value?.trim()}
-          className="gap-2"
-        >
-          <MdOutlineSend size={16} />
-          Submit Solution
-        </Button>
-      </div>
-    );
-  }
+  const getVoiceHint = () => {
+    if (isTranscribing) return "Converting your voice to text...";
+    if (isRecording) return "Recording... tap to stop";
+    return "Tap to record your answer";
+  };
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Voice unsupported warning */}
+    <div className="flex flex-col gap-3 h-full">
       {!isVoiceSupported && (
         <div
           className="text-xs px-3 py-2 rounded-lg"
@@ -123,65 +121,62 @@ const AnswerInput = ({
             color: "var(--color-warning)",
           }}
         >
-          Voice input is not supported in your browser. Use Chrome or Edge for
-          voice.
+          Voice recording is not supported in this browser. Please type your
+          answer.
         </div>
       )}
 
-      {/* Textarea */}
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={
-          isListening
-            ? "🎤 Listening... speak your answer"
-            : "Type your answer here..."
-        }
-        disabled={disabled || isSpeaking}
-        rows={12}
-        spellCheck={false}
-        className="input-base resize-none font-mono text-sm"
+        placeholder={getPlaceholder()}
+        disabled={disabled || isTranscribing}
+        rows={6}
+        className="input-base resize-none w-full h-full font-mono text-sm leading-relaxed"
         style={{
-          borderColor: isListening ? "var(--color-danger)" : undefined,
+          minHeight: "160px",
+          borderColor: isRecording ? "var(--color-danger)" : undefined,
+          opacity: disabled ? 0.6 : 1,
+          cursor: disabled ? "not-allowed" : "text",
         }}
       />
 
-      {/* Voice transcript indicator */}
-      {isListening && (
-        <Motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-xs flex items-center gap-2"
-          style={{ color: "var(--color-danger)" }}
-        >
-          <Motion.div
-            className="w-2 h-2 rounded-full bg-red-500"
-            animate={{ scale: [1, 1.4, 1] }}
-            transition={{ duration: 0.8, repeat: Infinity }}
-          />
-          Recording... click mic to stop
-        </Motion.div>
-      )}
+      {(isRecording || isTranscribing) && (
+        <div className="flex items-center gap-3">
+          {isRecording && (
+            <div className="flex h-8 items-center gap-1" aria-label="Voice volume">
+              {Array.from({ length: WAVE_BAR_COUNT }, (_, index) => {
+                const distance = Math.abs(index - (WAVE_BAR_COUNT - 1) / 2);
+                const shape = 1 - distance / ((WAVE_BAR_COUNT - 1) / 2);
+                const height = 4 + audioLevel * 24 * (0.35 + shape * 0.65);
 
-      {/* Actions */}
-      <div className="flex items-center gap-3">
-        <VoiceButton
-          isListening={isListening}
-          onStart={onVoiceStart}
-          onStop={onVoiceStop}
-          isSupported={isVoiceSupported}
-        />
-        <Button
-          fullWidth
-          onClick={onSubmit}
-          loading={loading}
-          disabled={disabled}
-          className="gap-2"
-        >
-          <MdOutlineSend size={16} />
-          Submit Answer
-        </Button>
-      </div>
+                return (
+                  <motion.span
+                    key={index}
+                    className="block w-1 rounded-full"
+                    animate={{ height: `${height}px`, opacity: 0.45 + audioLevel * 0.55 }}
+                    transition={{ duration: 0.08 }}
+                    style={{ backgroundColor: "var(--color-danger)" }}
+                  />
+                );
+              })}
+            </div>
+          )}
+          <motion.span
+            key={getVoiceHint()}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-xs"
+            style={{
+              color: isRecording
+                ? "var(--color-danger)"
+                : "var(--color-text-muted)",
+            }}
+          >
+            {getVoiceHint()}
+          </motion.span>
+        </div>
+      )}
     </div>
   );
 };

@@ -8,6 +8,9 @@ import FeedbackSection from "../features/interview/result/FeedbackSection.jsx";
 import ResultActions from "../features/interview/result/ResultActions.jsx";
 import Spinner from "../components/ui/Spinner.jsx";
 import useInterview from "../hooks/useInterview.js";
+import Button from "../components/ui/Button.jsx";
+import { MdOutlineArrowBack } from "react-icons/md";
+
 
 const InterviewResultPage = () => {
   const { id } = useParams();
@@ -33,13 +36,14 @@ const InterviewResultPage = () => {
   const { evaluation, answers, settings } = sessionData;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="max-w-3xl mx-auto flex flex-col gap-6"
-    >
+    <div className="w-full  flex flex-col gap-6">
+      <div className=" w-full  ">
+        <Button variant="secondary" onClick={() => window.history.back()}>
+          <MdOutlineArrowBack />
+        </Button>
+      </div>
       {/* Page title */}
-      <div>
+      <motion.div className="max-w-3xl mx-auto flex flex-col gap-6">
         <h1
           className="text-2xl font-bold"
           style={{ color: "var(--color-text-primary)" }}
@@ -58,7 +62,7 @@ const InterviewResultPage = () => {
             settings?.difficulty?.slice(1)}{" "}
           Difficulty
         </p>
-      </div>
+      </motion.div>
 
       {/* Score hero */}
       <ScoreHero finalScore={evaluation?.finalScore ?? 0} />
@@ -86,7 +90,7 @@ const InterviewResultPage = () => {
 
       {/* Actions */}
       <ResultActions />
-    </motion.div>
+    </div>
   );
 };
 

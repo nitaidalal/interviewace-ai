@@ -11,9 +11,14 @@ const fadeUp = {
 };
 
 const heroHighlights = [
-  "Adaptive interview questions",
-  "Instant feedback loops",
-  "Realistic coding environment",
+  {
+    title: "Adaptive interview questions",
+    description: "Questions adapt to your role, experience, and answers.",
+  },
+  {
+    title: "Instant feedback loops",
+    description: "Get clear scores and actionable feedback after every answer.",
+  },
 ];
 
 const HeroSection = () => {
@@ -198,7 +203,7 @@ const HeroSection = () => {
 
               <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
                 <div
-                  className="relative overflow-hidden rounded-[1.75rem] border p-6 min-h-[320px] flex items-center justify-center"
+                  className="relative h-[280px] overflow-hidden rounded-[1.75rem] border"
                   style={{
                     background:
                       "linear-gradient(180deg, color-mix(in srgb, var(--color-media-bg) 88%, var(--color-bg)), var(--color-surface))",
@@ -218,14 +223,14 @@ const HeroSection = () => {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.6, delay: 0.2 }}
-                    className="relative z-10 w-full max-w-[260px] drop-shadow-[0_18px_45px_rgba(0,0,0,0.18)]"
+                    className="absolute inset-0 z-10 h-full w-full object-cover"
                   />
                 </div>
 
                 <div className="flex flex-col gap-4">
                   {heroHighlights.map((item, index) => (
                     <Motion.div
-                      key={item}
+                      key={item.title}
                       initial={{ opacity: 0, x: 16 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{
@@ -250,14 +255,13 @@ const HeroSection = () => {
                             className="text-sm font-semibold"
                             style={{ color: "var(--color-text-primary)" }}
                           >
-                            {item}
+                            {item.title}
                           </p>
                           <p
                             className="text-xs mt-1"
                             style={{ color: "var(--color-text-secondary)" }}
                           >
-                            Built to keep the practice session focused and
-                            realistic.
+                            {item.description}
                           </p>
                         </div>
                       </div>

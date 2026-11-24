@@ -21,3 +21,14 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+export const speechLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 40,
+  message: {
+    success: false,
+    message: "Too many voice requests. Please slow down.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
