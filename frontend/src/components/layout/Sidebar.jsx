@@ -5,7 +5,6 @@ import {
   MdDashboard,
   MdOutlineVideoCall,
   MdOutlineDescription,
-  MdOutlineCode,
   MdOutlinePerson,
   MdOutlineLogout,
   MdOutlineWorkspacePremium,
@@ -20,11 +19,10 @@ const navItems = [
   { label: "Dashboard", href: ROUTES.DASHBOARD, icon: MdDashboard, end: true },
   { label: "AI Interview", href: ROUTES.INTERVIEW, icon: MdOutlineVideoCall },
   { label: "ATS Analyzer", href: ROUTES.ATS, icon: MdOutlineDescription },
-  { label: "Practice", href: ROUTES.PROGRAMMING, icon: MdOutlineCode },
   { label: "Profile", href: ROUTES.PROFILE, icon: MdOutlinePerson },
 ];
 
-const Sidebar = ({ collapsed, setCollapsed }) => {
+const Sidebar = ({ collapsed, setCollapsed, compact = false }) => {
   const { logout } = useAuth();
   const { isDark, toggle } = useTheme();
   const navigate = useNavigate();
@@ -55,25 +53,32 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         style={{ borderBottom: "1px solid var(--color-border)" }}
       >
         {!collapsed && (
-          <Motion.div
+          <Motion.button
+            type="button"
+            onClick={() => navigate(ROUTES.DASHBOARD)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 cursor-pointer rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+            aria-label="Go to dashboard"
           >
-            <div className="w-7 h-7 rounded-lg  flex items-center justify-center shrink-0">
-              {/* <HiSparkles className="text-white text-xs" /> */}
-              <img src="/interviewAceAi-image.png" alt="ai-logo" />
+            <div className="w-8 h-8 rounded-lg bg-brand-gradient flex items-center justify-center shrink-0 shadow-sm">
+              <HiSparkles className="text-white text-sm" />
             </div>
             <span className="font-bold text-sm text-gradient whitespace-nowrap">
               AceInterviewAI
             </span>
-          </Motion.div>
+          </Motion.button>
         )}
         {collapsed && (
-          <div className="w-7 h-7 rounded-lg bg-brand-gradient flex items-center justify-center mx-auto">
+          <button
+            type="button"
+            onClick={() => navigate(ROUTES.DASHBOARD)}
+            className="w-8 h-8 rounded-lg bg-brand-gradient flex items-center justify-center mx-auto cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+            aria-label="Go to dashboard"
+          >
             <HiSparkles className="text-white text-xs" />
-          </div>
+          </button>
         )}
       </div>
 
@@ -81,6 +86,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
       <nav className="flex-1 px-2 py-4 flex flex-col gap-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink
+            aria-label={item.label}
             key={item.href}
             to={item.href}
             end={item.end}
@@ -265,6 +271,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 
         {/* Theme toggle */}
         <button
+          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
           onClick={toggle}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg
             transition-colors duration-200 cursor-pointer w-full"
@@ -284,6 +291,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 
         {/* Logout */}
         <button
+          aria-label="Log out"
           onClick={logout}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg
             transition-colors duration-200 cursor-pointer w-full"
@@ -294,7 +302,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         </button>
 
         {/* Collapse toggle */}
-        <button
+        {!compact && <button
           onClick={() => setCollapsed((v) => !v)}
           className="flex items-center justify-center transition-colors duration-150"
           style={{
@@ -315,7 +323,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           ) : (
             <HiChevronLeft size={14} style={{ color: "var(--color-text-muted)" }} />
           )}
-        </button>
+        </button>}
 
       </div>
     </Motion.aside>
