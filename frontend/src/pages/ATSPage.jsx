@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {motion as  Motion, AnimatePresence } from "framer-motion";
 import { MdOutlineRefresh, MdOutlineHistory } from "react-icons/md";
 import { HiSparkles } from "react-icons/hi2";
@@ -13,6 +14,8 @@ import Spinner from "../components/ui/Spinner.jsx";
 import Button from "../components/ui/Button.jsx";
 
 const ATSPage = () => {
+  const [searchParams] = useSearchParams();
+  const analysisId = searchParams.get("analysis");
   const {
     analysis,
     history,
@@ -26,12 +29,15 @@ const ATSPage = () => {
     reset,
   } = useATS();
 
-  const [showHistory, setShowHistory] = useState(false);
-  const [historyPage, setHistoryPage] = useState(1);
+  const [showHistory, setShowHistory] = useState(() => searchParams.get("history") === "1");
 
   useEffect(() => {
     fetchHistory(1);
-  }, []);
+  }, [fetchHistory]);
+
+  useEffect(() => {
+    if (analysisId) fetchById(analysisId);
+  }, [analysisId, fetchById]);
 
   const handleSelectHistory = async (id) => {
     await fetchById(id);
