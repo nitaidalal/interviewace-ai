@@ -386,13 +386,15 @@
 
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { useNavigate, useParams } from 'react-router-dom'
+import { motion as Motion } from 'framer-motion'
 import { MdOutlineMic, MdOutlineMicOff } from 'react-icons/md'
 import LeftPanel from '../features/interview/session/LeftPanel.jsx'
 import RightPanel from '../features/interview/session/RightPanel.jsx'
 import AbandonModal from '../features/interview/session/AbandonModal.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
+import Button from '../components/ui/Button.jsx'
+import { ROUTES } from '../utils/constants.js'
 import useInterview from '../hooks/useInterview.js'
 import useVoice from '../hooks/useVoice.js'
 import useWebcam from '../hooks/useWebcam.js'
@@ -428,6 +430,7 @@ const appendText = (base, text) =>
 
 const InterviewSessionPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const {
     currentQuestion,
@@ -484,6 +487,13 @@ const InterviewSessionPage = () => {
   const prevQuestionIndex = useRef(0);
   const abandonLoadingRef = useRef(false);
   const submitLockRef = useRef(false);
+  const isInactive = status === "interrupted" || status === "abandoned";
+
+  useEffect(() => {
+    if (!isInactive) return;
+    cancelSpeaking();
+    stopWebcam();
+  }, [isInactive, cancelSpeaking, stopWebcam]);
 
   // ── On mount ──────────────────────────────────────────────────
   useEffect(() => {
@@ -581,6 +591,7 @@ const InterviewSessionPage = () => {
     if (status === "submitting" || isTranscribing) setAiState("thinking");
     else if (isSpeaking) setAiState("speaking");
     else if (isRecording) setAiState("listening");
+    else setAiState("idle");
   }, [isSpeaking, isRecording, isTranscribing, status]);
 
   // ── Auto-end after last question ──────────────────────────────
@@ -592,7 +603,7 @@ const InterviewSessionPage = () => {
 
   // ── Handlers ──────────────────────────────────────────────────
   const handleTimeout = useCallback(async () => {
-    if (status === "submitting" || submitLockRef.current) return;
+    if (status !== "active" || submitLockRef.current) return;
     submitLockRef.current = true;
 
     try {
@@ -606,20 +617,26 @@ const InterviewSessionPage = () => {
       const transcribedAnswer = await stopRecording();
       finalAnswer = appendText(answer, transcribedAnswer);
 
-      await submitAnswer({
+      const submitted = await submitAnswer({
         answer: finalAnswer,
         timedOut: !finalAnswer.trim(),
         responseTimeSeconds: elapsed,
         isCodingAnswer: currentQuestion?.isCodingQuestion ?? false,
       });
-      setAnswer("");
+      if (submitted === true) setAnswer("");
+      else if (submitted === false) {
+        setAnswer(finalAnswer);
+        setIsAwaitingNextQuestion(false);
+        setAiState("idle");
+        setTimerPaused(false);
+      }
     } finally {
       submitLockRef.current = false;
     }
   }, [answer, currentQuestion, status, isRecording, stopRecording, cancelSpeaking, submitAnswer]);
 
   const handleSubmit = useCallback(async () => {
-    if (status === "submitting" || isTranscribing || submitLockRef.current) return;
+    if (status !== "active" || isTranscribing || submitLockRef.current) return;
     submitLockRef.current = true;
 
     try {
@@ -633,13 +650,19 @@ const InterviewSessionPage = () => {
       const transcribedAnswer = await stopRecording();
       finalAnswer = appendText(answer, transcribedAnswer);
 
-      await submitAnswer({
+      const submitted = await submitAnswer({
         answer: finalAnswer,
         timedOut: false,
         responseTimeSeconds: elapsed,
         isCodingAnswer: currentQuestion?.isCodingQuestion ?? false,
       });
-      setAnswer("");
+      if (submitted === true) setAnswer("");
+      else if (submitted === false) {
+        setAnswer(finalAnswer);
+        setIsAwaitingNextQuestion(false);
+        setAiState("idle");
+        setTimerPaused(false);
+      }
     } finally {
       submitLockRef.current = false;
     }
@@ -651,9 +674,10 @@ const InterviewSessionPage = () => {
   }, [stopRecording]);
 
   const handleToggleMic = useCallback(() => {
+    if (isInactive) return;
     if (isRecording) handleStopRecording();
     else startRecording();
-  }, [isRecording, handleStopRecording, startRecording]);
+  }, [isInactive, isRecording, handleStopRecording, startRecording]);
 
   const handleToggleWebcam = useCallback(() => {
     if (webcamEnabled) stopWebcam();
@@ -690,6 +714,23 @@ const InterviewSessionPage = () => {
   });
 
   // ── Loading / ending screens ──────────────────────────────────
+  if (isInactive) {
+    return <div role="status" className="p-6">Interview ended. Returning to interview history...</div>;
+  }
+
+  if (status === "evaluation_failed") {
+    return (
+      <div role="alert" className="flex flex-col items-center justify-center gap-4 min-h-screen p-6">
+        <h1 className="text-xl font-semibold">Unable to finish your interview</h1>
+        <p>Your saved answers are safe. Completion and any credit refund have not been confirmed.</p>
+        <Button onClick={endInterview}>Retry Final Evaluation</Button>
+        <Button variant="secondary" onClick={() => navigate(ROUTES.INTERVIEW_HISTORY)}>
+          Go to Interview History
+        </Button>
+      </div>
+    );
+  }
+
   if (status === "loading" || (!currentQuestion && status !== "ending")) {
     return (
       <div
@@ -723,7 +764,7 @@ const InterviewSessionPage = () => {
   }
 
   return (
-    <motion.div
+    <Motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="flex h-full overflow-hidden"
@@ -821,7 +862,7 @@ const InterviewSessionPage = () => {
             totalQuestions={totalQuestions}
             timeLimit={currentQuestion?.timeLimitSeconds ?? 60}
             onTimeout={handleTimeout}
-            timerPaused={timerPaused}
+            timerPaused={timerPaused || status !== "active"}
             timerKey={timerKey}
             currentQuestion={currentQuestion}
             questionVisible={questionVisible}
@@ -846,7 +887,7 @@ const InterviewSessionPage = () => {
         onCancel={() => setShowAbandon(false)}
         loading={abandonLoadingRef.current}
       />
-    </motion.div>
+    </Motion.div>
   );
 };
 

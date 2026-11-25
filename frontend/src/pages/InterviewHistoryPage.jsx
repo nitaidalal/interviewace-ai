@@ -158,7 +158,7 @@ const InterviewHistoryPage = () => {
                     <span>{formatDate(s.startedAt)}</span>
                     <span>·</span>
                     <span>{formatDuration(s.actualDuration)}</span>
-                    {s.evaluation?.finalScore != null && (
+                    {s.status === "completed" && s.evaluation?.finalScore != null && (
                       <>
                         <span>·</span>
                         <span

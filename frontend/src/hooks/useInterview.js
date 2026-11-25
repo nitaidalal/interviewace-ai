@@ -28,6 +28,36 @@ const useInterview = () => {
 
   // Ref to avoid stale closure in revealNextQuestion
   const pendingNextQuestionRef = useRef(null);
+  const terminalRef = useRef(false);
+
+  const handleInactiveSession = useCallback((sessionStatus, creditsRefunded = 0) => {
+    terminalRef.current = true;
+    pendingNextQuestionRef.current = null;
+    setPendingNextQuestion(null);
+    setStatus(sessionStatus);
+    const message = sessionStatus === "interrupted"
+      ? `Interview interrupted. ${creditsRefunded > 0
+        ? `${creditsRefunded} credits have been refunded.`
+        : "See interview history for details."} Your saved progress is preserved.`
+      : "This interview is no longer active.";
+    toast.error(message, { id: "interview-inactive", duration: 6000 });
+    navigate(ROUTES.INTERVIEW_HISTORY, { replace: true });
+  }, [navigate]);
+
+  const handleSessionError = useCallback((error) => {
+    const body = error.response?.data;
+    const detail = body?.errors?.find((item) =>
+      ["INTERVIEW_INTERRUPTED", "INTERVIEW_NOT_ACTIVE"].includes(item.code));
+    if (body?.code === "INTERVIEW_INTERRUPTED" || detail?.code === "INTERVIEW_INTERRUPTED") {
+      handleInactiveSession("interrupted", body?.creditsRefunded ?? detail?.creditsRefunded ?? 0);
+      return true;
+    }
+    if (detail?.code === "INTERVIEW_NOT_ACTIVE") {
+      handleInactiveSession(detail.status);
+      return true;
+    }
+    return false;
+  }, [handleInactiveSession]);
 
   // ─── Helpers ──────────────────────────────────────────────────
 
@@ -52,6 +82,7 @@ const useInterview = () => {
 
   const startInterview = useCallback(
     async (settings) => {
+      terminalRef.current = false;
       setStatus("loading");
       try {
         const res = await startInterviewApi(settings);
@@ -103,25 +134,21 @@ const useInterview = () => {
       responseTimeSeconds = 0,
       isCodingAnswer = false,
     }) => {
-      if (!sessionId) return;
+      if (!sessionId || terminalRef.current) return;
       setStatus("submitting");
       setFeedback(null);
 
       try {
-        addMessage(
-          "candidate",
-          timedOut && !answer ? "(No answer submitted)" : answer,
-          "answer",
-        );
-
         const res = await submitAnswerApi(sessionId, {
           answer,
           timedOut,
           responseTimeSeconds,
           isCodingAnswer,
         });
+        if (terminalRef.current) return;
         const data = res.data.data;
 
+        addMessage("candidate", timedOut && !answer ? "(No answer submitted)" : answer, "answer");
         // Add feedback to messages + set feedback state
         addMessage("ai", data.feedback, "feedback");
         setFeedback({ text: data.feedback, score: data.questionScore });
@@ -143,12 +170,16 @@ const useInterview = () => {
           storePendingQuestion(nextQ);
           setStatus("active");
         }
+        return true;
       } catch (err) {
+        if (terminalRef.current) return;
+        if (handleSessionError(err)) return;
         setStatus("active");
         toast.error(parseApiError(err));
+        return false;
       }
     },
-    [sessionId],
+    [sessionId, handleSessionError],
   );
 
   // ─── Reveal Next Question ─────────────────────────────────────
@@ -156,6 +187,7 @@ const useInterview = () => {
   // Uses ref to avoid stale closure problem
 
   const revealNextQuestion = useCallback(() => {
+    if (terminalRef.current) return;
     const next = pendingNextQuestionRef.current;
     if (!next) return;
 
@@ -169,24 +201,29 @@ const useInterview = () => {
   // ─── End Interview ────────────────────────────────────────────
 
   const endInterview = useCallback(async () => {
-    if (!sessionId) return;
+    if (!sessionId || terminalRef.current) return;
     setStatus("ending");
     try {
       await endInterviewApi(sessionId);
+      if (terminalRef.current) return;
       setStatus("done");
       navigate(`/dashboard/interview/${sessionId}/result`);
     } catch (err) {
-      setStatus("active");
+      if (terminalRef.current) return;
+      if (handleSessionError(err)) return;
+      setStatus("evaluation_failed");
       toast.error(parseApiError(err));
     }
-  }, [sessionId, navigate]);
+  }, [sessionId, navigate, handleSessionError]);
 
   // ─── Abandon Interview ────────────────────────────────────────
 
   const abandonInterview = useCallback(async () => {
-    if (!sessionId) return;
+    if (!sessionId || terminalRef.current) return;
     try {
       await abandonInterviewApi(sessionId);
+      terminalRef.current = true;
+      setStatus("abandoned");
       navigate(ROUTES.DASHBOARD);
       toast.success(
         "Interview abandoned. Credits refunded if no answers given.",
@@ -203,6 +240,10 @@ const useInterview = () => {
     try {
       const res = await getSession(id);
       const session = res.data.data.session;
+      if (["interrupted", "abandoned"].includes(session.status)) {
+        handleInactiveSession(session.status, session.creditsRefunded);
+        return;
+      }
       const currentIndex = session.currentQuestionIndex || 1;
       const activeQuestion = session.questions?.find(
         (q) => q.index === currentIndex,
@@ -238,7 +279,7 @@ const useInterview = () => {
       toast.error(parseApiError(err));
       setStatus("idle");
     }
-  }, []);
+  }, [handleInactiveSession]);
 
   // ─── Return ───────────────────────────────────────────────────
 
