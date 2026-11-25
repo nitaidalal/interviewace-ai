@@ -17,8 +17,8 @@ const userRepository = {
     return User.create(data);
   },
 
-  async updateById(id, data) {
-    return User.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+  async updateById(id, data, options = {}) {
+    return User.findByIdAndUpdate(id, data, { returnDocument: "after", runValidators: true, ...options });
   },
 
   async existsByEmail(email) {
@@ -34,7 +34,7 @@ const userRepository = {
   },
 
   async promoteToAdmin(email) {
-    return User.findOneAndUpdate({ email }, { role: "admin" }, { new: true });
+    return User.findOneAndUpdate({ email }, { role: "admin" }, { returnDocument: "after" });
   },
 
   async findAllCandidates({ page = 1, limit = 20 } = {}) {
@@ -51,11 +51,11 @@ const userRepository = {
   },
 
   async updateAvatar(id, avatarUrl) {
-    return User.findByIdAndUpdate(id, { avatar: avatarUrl }, { new: true });
+    return User.findByIdAndUpdate(id, { avatar: avatarUrl }, { returnDocument: "after" });
   },
 
   async removeAvatar(id) {
-    return User.findByIdAndUpdate(id, { avatar: null }, { new: true });
+    return User.findByIdAndUpdate(id, { avatar: null }, { returnDocument: "after" });
   },
 };
 

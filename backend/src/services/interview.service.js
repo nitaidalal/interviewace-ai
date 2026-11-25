@@ -1,5 +1,5 @@
 import interviewRepository from "../repositories/interview.repository.js";
-import geminiService from "./gemini.service.js";
+import groqService from "./groq.service.js";
 import creditService from "./credit.service.js";
 import userRepository from "../repositories/user.repository.js";
 import ApiError from "../utils/ApiError.js";
@@ -8,7 +8,12 @@ import {
   buildGreeting,
   getCodingConfig,
 } from "../utils/prompts/interview.prompt.js";
-import { QUESTIONS_PER_PLAN } from "../utils/constants.js";
+import { CREDIT_COSTS, QUESTIONS_PER_PLAN } from "../utils/constants.js";
+import {
+  assertInterviewActive,
+  handleAIInterviewFailure,
+  settleInterview,
+} from "./interviewFailure.service.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
@@ -99,15 +104,6 @@ const interviewService = {
       throw new ApiError(400, "Role is required for technical interviews");
     }
 
-    // 3. Check Gemini health before deducting credits
-    const geminiOk = await geminiService.healthCheck();
-    if (!geminiOk) {
-      throw new ApiError(
-        503,
-        "AI service is temporarily unavailable. Please try again.",
-      );
-    }
-
     // 4. Determine question count based on plan
     const totalQuestions = isPro
       ? QUESTIONS_PER_PLAN.pro
@@ -147,24 +143,16 @@ const interviewService = {
         : [totalQuestions]
       : [];
 
-    // 7. Generate all questions via Gemini
-    let questions;
-    try {
-      questions = await geminiService.generateQuestions({
-        settings,
-        totalQuestions,
-        isPro,
-        resumeText: body.resumeText,
-      });
-    } catch (err) {
-      throw new ApiError(
-        503,
-        "Failed to generate interview questions. Please try again.",
-      );
-    }
+    // 7. Generate all questions via Groq before deducting credits
+    const questions = await groqService.generateQuestions({
+      settings,
+      totalQuestions,
+      isPro,
+      resumeText: body.resumeText,
+    });
 
     // 8. Deduct credits
-    await creditService.deduct(userId, 20);
+    await creditService.deduct(userId, CREDIT_COSTS.INTERVIEW);
 
     // 9. Build greeting message
     const stackContext = getStackContext(settings);
@@ -226,9 +214,7 @@ const interviewService = {
       userId,
     );
     if (!session) throw new ApiError(404, "Interview session not found");
-    if (session.status !== "active") {
-      throw new ApiError(400, "This interview session is no longer active");
-    }
+    await assertInterviewActive(session);
 
     const { answer, timedOut, responseTimeSeconds, isCodingAnswer } = body;
     const currentIndex = session.currentQuestionIndex;
@@ -243,14 +229,19 @@ const interviewService = {
     const stackContext = getStackContext(session.settings);
 
     // 2. Generate feedback for this answer
-    const feedback = await geminiService.generateFeedback({
-      question: currentQuestion.content,
-      candidateAnswer: answer,
-      stackContext,
-      experience: session.settings.experience,
-      timedOut,
-      isCodingQuestion: currentQuestion.isCodingQuestion,
-    });
+    let feedback;
+    try {
+      feedback = await groqService.generateFeedback({
+        question: currentQuestion.content,
+        candidateAnswer: answer,
+        stackContext,
+        experience: session.settings.experience,
+        timedOut,
+        isCodingQuestion: currentQuestion.isCodingQuestion,
+      });
+    } catch (error) {
+      await handleAIInterviewFailure(sessionId, userId, error);
+    }
 
     // 3. Build answer object
     const answerObj = {
@@ -312,7 +303,15 @@ const interviewService = {
       updates.$set = { currentQuestionIndex: nextQuestionIndex };
     }
 
-    await interviewRepository.updateById(sessionId, updates);
+    const updated = await interviewRepository.updateActiveAnswer(
+      sessionId, userId, currentIndex, updates,
+    );
+    if (!updated) {
+      const latest = await interviewRepository.findByIdAndUser(sessionId, userId);
+      if (!latest) throw new ApiError(404, "Interview session not found");
+      await assertInterviewActive(latest);
+      throw new ApiError(409, "This answer has already been submitted.");
+    }
 
     // 8. Return response
     return {
@@ -341,6 +340,7 @@ const interviewService = {
     if (session.status === "completed") {
       return { alreadyCompleted: true, evaluation: session.evaluation };
     }
+    await assertInterviewActive(session);
 
     const user = await userRepository.findById(userId);
     const stackContext = getStackContext(session.settings);
@@ -353,24 +353,16 @@ const interviewService = {
     const finalScore = calculateFinalScore(session.answers);
 
     // Generate final evaluation
-    const evalResult = await geminiService.generateEvaluation({
-      answers: session.answers,
-      settings: session.settings,
-      stackContext,
-      userName: user.name,
-    });
-
-    if (!evalResult) {
-      // Gemini failed — save as interrupted, refund credits
-      await creditService.refund(userId, 20);
-      await interviewRepository.markInterrupted(sessionId, {
-        endedAt,
-        actualDuration,
+    let evalResult;
+    try {
+      evalResult = await groqService.generateEvaluation({
+        answers: session.answers,
+        settings: session.settings,
+        stackContext,
+        userName: user.name,
       });
-      throw new ApiError(
-        503,
-        "AI evaluation failed. Your credits have been refunded. Please try again.",
-      );
+    } catch (error) {
+      await handleAIInterviewFailure(sessionId, userId, error);
     }
 
     const evaluation = {
@@ -387,6 +379,14 @@ const interviewService = {
       endedAt,
       actualDuration,
     });
+    if (!completed) {
+      const latest = await interviewRepository.findByIdAndUser(sessionId, userId);
+      if (!latest) throw new ApiError(404, "Interview session not found");
+      if (latest.status === "completed") {
+        return { alreadyCompleted: true, evaluation: latest.evaluation };
+      }
+      await assertInterviewActive(latest);
+    }
 
     const interviewTitle = buildInterviewTitle(session.settings);
     activityService
@@ -414,21 +414,8 @@ const interviewService = {
   },
 
   async abandonSession(sessionId, userId) {
-    const session = await interviewRepository.findByIdAndUser(
-      sessionId,
-      userId,
-    );
-    if (!session) throw new ApiError(404, "Interview session not found");
-    if (session.status !== "active") return session;
-
-    // Partial refund — they used some questions
-    const questionsAnswered = session.answers.length;
-    const totalQuestions = session.settings.totalQuestions;
-    if (questionsAnswered === 0) {
-      await creditService.refund(userId, 20);
-    }
-
-    return interviewRepository.markAbandoned(sessionId);
+    // Abandonment still refunds only when no answers have been saved.
+    return settleInterview(sessionId, userId, "abandoned");
   },
 };
 

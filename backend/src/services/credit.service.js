@@ -124,7 +124,7 @@ const creditService = {
   },
 
   /**
-   * Refunds credits if a feature fails mid-way (e.g. Gemini quota hit).
+   * Refunds credits if a feature fails mid-way.
    */
   async refund(userId, creditCost) {
     return userRepository.updateById(userId, {
@@ -133,6 +133,30 @@ const creditService = {
         "usage.dailyCreditsUsed": -creditCost,
       },
     });
+  },
+
+  async refundInterview(userId, { session }) {
+    if (!session?.inTransaction()) {
+      throw new Error("Interview refunds require an active MongoDB transaction");
+    }
+    const refunded = await userRepository.updateById(
+      userId,
+      [
+        { $set: {
+          "usage.remainingCredits": {
+            $add: ["$usage.remainingCredits", CREDIT_COSTS.INTERVIEW],
+          },
+          "usage.dailyCreditsUsed": {
+            $max: [0, { $subtract: ["$usage.dailyCreditsUsed", CREDIT_COSTS.INTERVIEW] }],
+          },
+        } },
+      ],
+      { session, updatePipeline: true },
+    );
+    if (!refunded) {
+      throw new ApiError(404, "User not found while refunding interview credits");
+    }
+    return CREDIT_COSTS.INTERVIEW;
   },
 
   /**
