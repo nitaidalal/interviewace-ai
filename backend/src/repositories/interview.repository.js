@@ -2,8 +2,9 @@ import InterviewSession from "../models/interview-session.model.js";
 import { CREDIT_COSTS } from "../utils/constants.js";
 
 const interviewRepository = {
-  async create(data) {
-    return InterviewSession.create(data);
+  async create(data, { session = null } = {}) {
+    const interview = new InterviewSession(data);
+    return interview.save({ session });
   },
 
   async findById(id) {

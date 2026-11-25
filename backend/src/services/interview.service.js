@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import interviewRepository from "../repositories/interview.repository.js";
 import groqService from "./groq.service.js";
 import creditService from "./credit.service.js";
@@ -8,7 +9,7 @@ import {
   buildGreeting,
   getCodingConfig,
 } from "../utils/prompts/interview.prompt.js";
-import { CREDIT_COSTS, QUESTIONS_PER_PLAN } from "../utils/constants.js";
+import { QUESTIONS_PER_PLAN } from "../utils/constants.js";
 import {
   assertInterviewActive,
   handleAIInterviewFailure,
@@ -151,9 +152,6 @@ const interviewService = {
       resumeText: body.resumeText,
     });
 
-    // 8. Deduct credits
-    await creditService.deduct(userId, CREDIT_COSTS.INTERVIEW);
-
     // 9. Build greeting message
     const stackContext = getStackContext(settings);
     const greetingContent = buildGreeting({
@@ -184,15 +182,30 @@ const interviewService = {
       timestamp: new Date(),
     };
 
-    // 11. Create session
-    const session = await interviewRepository.create({
-      user: userId,
-      settings,
-      questions,
-      messages: [greetingMessage, firstQuestionMessage],
-      currentQuestionIndex: 1,
-      webcamEnabled: body.webcamEnabled ?? false,
+    // 11. Atomically deduct credits and create session
+    const session = await mongoose.connection.transaction(async (dbSession) => {
+      const creditsDeducted = await creditService.deductInterviewCredits(userId, {
+        session: dbSession,
+        expectedPlan: isPro ? "pro" : "free",
+      });
+      if (!creditsDeducted) return null;
+
+      return interviewRepository.create({
+        user: userId,
+        settings,
+        questions,
+        messages: [greetingMessage, firstQuestionMessage],
+        currentQuestionIndex: 1,
+        webcamEnabled: body.webcamEnabled ?? false,
+      }, { session: dbSession });
     });
+
+    if (!session) {
+      throw new ApiError(
+        409,
+        "Your subscription has changed. Please start the interview again.",
+      );
+    }
 
     return {
       sessionId: session._id,

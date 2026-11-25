@@ -5,8 +5,8 @@ const userRepository = {
     return User.findOne({ email }).select("+password");
   },
 
-  async findById(id) {
-    return User.findById(id);
+  async findById(id, { session = null } = {}) {
+    return User.findById(id).session(session);
   },
 
   async findByIdWithPassword(id) {
