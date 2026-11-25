@@ -24,7 +24,10 @@ export const startCronJobs = () => {
     } catch (error) {
       console.error("❌ Monthly credit reset failed:", error.message);
     }
-  });
+  },{
+    timezone: "Asia/Kolkata", 
+  }
+);
 
   console.log("✅ Cron jobs started");
 };
