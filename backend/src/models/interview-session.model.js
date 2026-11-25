@@ -128,6 +128,7 @@ const interviewSessionSchema = new mongoose.Schema(
     startedAt: { type: Date, default: Date.now },
     endedAt: { type: Date, default: null },
     actualDuration: { type: Number, default: null },
+    creditsRefunded: { type: Number, default: 0 },
   },
   { timestamps: true }
 )

@@ -1,21 +1,11 @@
 import { PDFParse } from "pdf-parse";
 import ApiError  from '../utils/ApiError.js';
-import { ai, GEMINI_MODEL } from '../config/gemini.js';
+import { generateAI } from '../utils/generateAI.js';
 import atsRepository from '../repositories/ats.repository.js';
 import creditService from './credit.service.js';
 import { buildATSPrompt } from '../utils/prompts/ats.prompt.js';
 import {CREDIT_COSTS} from '../utils/constants.js';
 import activityService from "./activity.service.js";
-
-const parseJSON = (text) => {
-    try {
-        const clean = text.replace(/```json\n?/gi, "").replace(/```\n?/gi, "").trim();
-        return JSON.parse(clean);
-    } catch (error) {
-        throw new ApiError(500, "Invalid JSON in response");
-    }
-}
-
 
 const atsService = {
     async analyzeResume(userId, file) {
@@ -49,30 +39,25 @@ const atsService = {
       let trucatedText = extractedText.slice(0, 8000);
 
 
-      // 2. Call Gemini for analysis
+      // 2. Call Groq for analysis
       const prompt = buildATSPrompt(trucatedText);
-      let result;
-      try {
-        const response = await ai.models.generateContent({
-          model: GEMINI_MODEL,
-          contents: prompt,
-        });
-        result = parseJSON(response.text);
-      } catch (error) {
-        console.error("ATS Gemini error:", {
-          name: error.name,
-          message: error.message,
-        });
-        if (error instanceof ApiError) throw error;
-        throw new ApiError(
-          503,
-          "AI analysis is temporarily unavailable. Please try again.",
-        );
-      }
+      const result = await generateAI(prompt, {
+        reasoningEffort: "low",
+        maxTokens: 3000,
+        temperature: 0.3,
+        feature: "ats-analysis",
+      });
 
 
       // 3. Validate result shape
-      if (!result.overallScore || !result.sections) {
+      if (
+        !result ||
+        typeof result.overallScore !== "number" ||
+        !Number.isFinite(result.overallScore) ||
+        !result.sections ||
+        typeof result.sections !== "object" ||
+        Array.isArray(result.sections)
+      ) {
         throw new ApiError(
           500,
           "AI returned an incomplete analysis. Please try again.",

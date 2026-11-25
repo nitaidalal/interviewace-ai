@@ -160,6 +160,7 @@ export const buildQuestionGenerationPrompt = ({
   totalQuestions,
   codingConfig,
   resumeText,
+  responseFormat = "array",
 }) => {
   const stackContext = buildStackContext(settings);
   const { difficulty, experience } = settings;
@@ -185,7 +186,7 @@ export const buildQuestionGenerationPrompt = ({
   Difficulty: ${difficulty}
   ${resumeContext}
   
-  Generate EXACTLY ${totalQuestions} interview questions as a JSON array.
+  Generate EXACTLY ${totalQuestions} interview questions as ${responseFormat === "object" ? 'a JSON object with a "questions" array' : "a JSON array"}.
   
   Requirements:
   - Questions ${1} to ${regularCount}: Regular interview questions
@@ -211,7 +212,19 @@ export const buildQuestionGenerationPrompt = ({
   }
   
   Return ONLY this JSON — no markdown, no explanation, no extra text:
-  [
+  ${responseFormat === "object" ? JSON.stringify({
+    questions: Array.from({ length: totalQuestions }, (_, index) => {
+      const isCodingQuestion = hasCoding && index >= regularCount;
+      return {
+        index: index + 1,
+        content: isCodingQuestion
+          ? `coding problem ${index + 1} description here`
+          : `question ${index + 1} text here`,
+        isCodingQuestion,
+        codingLanguage: isCodingQuestion ? codingLanguage : null,
+      };
+    }),
+  }, null, 2) : `[
     {
       "index": 1,
       "content": "question text here",
@@ -229,10 +242,10 @@ export const buildQuestionGenerationPrompt = ({
     }`
         : ""
     }
-  ]
+  ]`}
   
   IMPORTANT:
-  - Return valid JSON array only
+  - Return ${responseFormat === "object" ? 'a valid JSON object containing the "questions" array' : "valid JSON array"} only
   - Exactly ${totalQuestions} objects
   - No duplicate questions
   - No generic questions — all must be specific to ${stackContext}`;

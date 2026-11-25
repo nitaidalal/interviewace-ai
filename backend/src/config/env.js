@@ -1,7 +1,7 @@
 const requiredEnvVars = [
   "MONGODB_URI",
   "JWT_SECRET",
-  "GEMINI_API_KEY",
+  "GROQ_API_KEY",
   "RAZORPAY_KEY_ID",
   "RAZORPAY_KEY_SECRET",
   "CLOUDINARY_CLOUD_NAME",

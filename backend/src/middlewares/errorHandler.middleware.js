@@ -46,6 +46,10 @@ const globalErrorHandler = (err, req, res, next) => {
       success: false,
       message,
       errors,
+      ...(err.code === "INTERVIEW_INTERRUPTED" && {
+        code: err.code,
+        creditsRefunded: err.creditsRefunded,
+      }),
       ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
     });
 }

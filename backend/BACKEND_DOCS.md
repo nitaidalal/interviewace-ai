@@ -11,7 +11,7 @@
 - bcryptjs (password hashing)
 - Cloudinary (avatar/image storage)
 - Razorpay (payments)
-- Google Gemini API (AI)
+- Groq API (AI)
 - Judge0 via RapidAPI (code execution)
 - node-cron (scheduled jobs)
 - Multer (file uploads)
@@ -30,7 +30,7 @@ Request → Route → Middleware → Controller → Service → Repository → D
 - Services        → all business logic, no DB queries
 - Repositories    → all DB queries, no logic
 - Middlewares     → auth, role, validation, credit checks
-- Utils/Prompts   → all Gemini prompts centralized here
+- Utils/Prompts   → all Groq prompts centralized here
 - ApiResponse     → standard response wrapper on every endpoint
 - ApiError        → custom error class, caught by global error handler
 - asyncHandler    → wraps every controller, no try/catch repetition
@@ -289,7 +289,7 @@ InterviewSession {
 - Pro users: 10 questions per interview
 - Questions generated one by one (adaptive, conversational)
 - 60 seconds per answer (enforced on frontend, flagged in backend)
-- Gemini failure → save session as 'interrupted', refund 20 credits
+- Groq failure → save session as 'interrupted', refund 20 credits
 
 ---
 
@@ -332,7 +332,7 @@ ResumeAnalysis {
 | GET | /api/v1/programming/questions | ✅ | — | List published questions |
 | GET | /api/v1/programming/questions/:id | ✅ | — | Get single question |
 | POST | /api/v1/programming/run | ✅ | — | Run code via Judge0 (not saved) |
-| POST | /api/v1/programming/submit | ✅ | 2 | Submit + Gemini review |
+| POST | /api/v1/programming/submit | ✅ | 2 | Submit + Groq review |
 | GET | /api/v1/programming/submissions/me | ✅ | — | My submission history |
 
 ### Planned Models
@@ -357,9 +357,9 @@ ProgrammingSubmission {
 
 ### Key Rules
 - Run button → Judge0 only, not saved, unlimited, free
-- Submit button → Gemini review only (no Judge0 at submit), saved, costs 2 credits
-- Empty submission → score 0, no Gemini call, no credit deduction
-- Gemini unavailable → show reference solution, save aiReview.failed: true
+- Submit button → Groq review only (no Judge0 at submit), saved, costs 2 credits
+- Empty submission → score 0, no Groq call, no credit deduction
+- Groq unavailable → show reference solution, save aiReview.failed: true
 
 ---
 
@@ -436,7 +436,7 @@ NODE_ENV
 MONGODB_URI
 JWT_SECRET
 JWT_EXPIRES_IN
-GEMINI_API_KEY
+GROQ_API_KEY
 RAZORPAY_KEY_ID
 RAZORPAY_KEY_SECRET
 CLOUDINARY_CLOUD_NAME

@@ -1,4 +1,5 @@
-  import InterviewSession from "../models/interview-session.model.js";
+import InterviewSession from "../models/interview-session.model.js";
+import { CREDIT_COSTS } from "../utils/constants.js";
 
 const interviewRepository = {
   async create(data) {
@@ -9,8 +10,37 @@ const interviewRepository = {
     return InterviewSession.findById(id);
   },
 
-  async findByIdAndUser(id, userId) {
-    return InterviewSession.findOne({ _id: id, user: userId });
+  async findByIdAndUser(id, userId, { session = null } = {}) {
+    return InterviewSession.findOne({ _id: id, user: userId }).session(session);
+  },
+
+  async updateActiveAnswer(id, userId, questionIndex, data) {
+    return InterviewSession.findOneAndUpdate(
+      { _id: id, user: userId, status: "active", currentQuestionIndex: questionIndex,
+        "answers.questionIndex": { $ne: questionIndex } },
+      data,
+      { returnDocument: "after" },
+    );
+  },
+
+  async transitionActive(id, userId, status, { session }) {
+    const endedAt = new Date();
+    return InterviewSession.findOneAndUpdate(
+      { _id: id, user: userId, status: "active" },
+      [{
+        $set: {
+          status,
+          endedAt,
+          creditsRefunded: status === "interrupted"
+            ? CREDIT_COSTS.INTERVIEW
+            : { $cond: [{ $eq: [{ $size: "$answers" }, 0] }, CREDIT_COSTS.INTERVIEW, 0] },
+          actualDuration: {
+            $round: [{ $divide: [{ $subtract: [endedAt, "$startedAt"] }, 1000] }, 0],
+          },
+        },
+      }],
+      { returnDocument: "after", session, updatePipeline: true },
+    );
   },
 
   async findActiveByUser(userId) {
@@ -18,14 +48,14 @@ const interviewRepository = {
   },
 
   async updateById(id, data) {
-    return InterviewSession.findByIdAndUpdate(id, data, { new: true });
+    return InterviewSession.findByIdAndUpdate(id, data, { returnDocument: "after" });
   },
 
   async pushMessage(id, message) {
     return InterviewSession.findByIdAndUpdate(
       id,
       { $push: { messages: message } },
-      { new: true },
+      { returnDocument: "after" },
     );
   },
 
@@ -33,7 +63,7 @@ const interviewRepository = {
     return InterviewSession.findByIdAndUpdate(
       id,
       { $push: { answers: answer } },
-      { new: true },
+      { returnDocument: "after" },
     );
   },
 
@@ -41,7 +71,7 @@ const interviewRepository = {
     return InterviewSession.findByIdAndUpdate(
       id,
       { $inc: { currentQuestionIndex: 1 } },
-      { new: true },
+      { returnDocument: "after" },
     );
   },
 
@@ -63,33 +93,18 @@ const interviewRepository = {
   },
 
   async markCompleted(id, { evaluation, endedAt, actualDuration }) {
-    return InterviewSession.findByIdAndUpdate(
-      id,
+    return InterviewSession.findOneAndUpdate(
+      { _id: id, status: "active" },
       {
         status: "completed",
         evaluation,
         endedAt,
         actualDuration,
       },
-      { new: true },
+      { returnDocument: "after" },
     );
   },
 
-  async markInterrupted(id, { endedAt, actualDuration }) {
-    return InterviewSession.findByIdAndUpdate(
-      id,
-      { status: "interrupted", endedAt, actualDuration },
-      { new: true },
-    );
-  },
-
-  async markAbandoned(id) {
-    return InterviewSession.findByIdAndUpdate(
-      id,
-      { status: "abandoned", endedAt: new Date() },
-      { new: true },
-    );
-  },
 };
 
 export default interviewRepository;

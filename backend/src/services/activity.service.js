@@ -35,9 +35,9 @@ const activityService = {
     return { items, pagination: result.pagination };
   },
 
-  async createInterviewActivity(userId, interviewId, title, score) {
+  async createInterviewActivity({ userId, interviewId, title, score }) {
     const exists = await activityRepository.existsByReference(
-      referenceId,
+      interviewId,
       "interview",
     );
     if (exists)
@@ -52,7 +52,7 @@ const activityService = {
     });
   },
 
-  async createResumeActivity(userId, resumeId, score) {
+  async createResumeActivity({ userId, resumeId, score }) {
     const exists = await activityRepository.existsByReference(
       resumeId,
       "resume",
