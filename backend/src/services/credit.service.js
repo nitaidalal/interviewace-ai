@@ -16,9 +16,16 @@ const getDailyLimit = (user) => {
   return PLAN_LIMITS.free.dailyLimit;
 };
 
+const istDateFormatter = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 const isNewDay = (lastResetDate) => {
-  const today = new Date().toDateString();
-  const lastReset = new Date(lastResetDate).toDateString();
+  const today = istDateFormatter.format(new Date());
+  const lastReset = istDateFormatter.format(new Date(lastResetDate));
   return today !== lastReset;
 };
 
