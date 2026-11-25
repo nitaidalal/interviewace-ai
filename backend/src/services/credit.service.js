@@ -29,13 +29,13 @@ const creditService = {
    * Resets daily credits if the calendar date has changed.
    * Called as middleware before any credit-consuming action.
    */
-  async resetDailyIfNeeded(user) {
+  async resetDailyIfNeeded(user, { session = null } = {}) {
     if (!isNewDay(user.usage.lastDailyReset)) return user;
 
     const updated = await userRepository.updateById(user._id, {
       "usage.dailyCreditsUsed": 0,
       "usage.lastDailyReset": new Date(),
-    });
+    }, { session });
 
     return updated;
   },
@@ -44,7 +44,7 @@ const creditService = {
    * Checks if Pro subscription has expired.
    * If expired → downgrades user to free plan with fresh free credits.
    */
-  async checkSubscriptionExpiry(user) {
+  async checkSubscriptionExpiry(user, { session = null } = {}) {
     if (user.subscription.plan === "free") return user;
     if (!user.subscription.expiresAt) return user;
 
@@ -63,7 +63,7 @@ const creditService = {
       "usage.remainingCredits": PLAN_LIMITS.free.totalCredits,
       "usage.dailyCreditsUsed": 0,
       "usage.lastDailyReset": new Date(),
-    });
+    }, { session });
 
     console.log(
       `⚠️  Pro subscription expired for user ${user._id}. Downgraded to free.`,
@@ -114,13 +114,51 @@ const creditService = {
   /**
    * Deducts credits after a successful feature use.
    */
-  async deduct(userId, creditCost) {
-    return userRepository.updateById(userId, {
+  async deduct(userId, creditCost, { session = null } = {}) {
+    const updated = await userRepository.updateById(userId, {
       $inc: {
         "usage.remainingCredits": -creditCost,
         "usage.dailyCreditsUsed": creditCost,
       },
-    });
+    }, { session });
+
+    if (!updated) {
+      throw new ApiError(404, "User not found");
+    }
+
+    return updated;
+  },
+
+  async deductInterviewCredits(userId, { session, expectedPlan }) {
+    if (!session?.inTransaction()) {
+      throw new Error(
+        "Interview credit deduction requires an active MongoDB transaction",
+      );
+    }
+
+    let user = await userRepository.findById(userId, { session });
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    user = await this.resetDailyIfNeeded(user, { session });
+    user = await this.checkSubscriptionExpiry(user, { session });
+
+    if (user.subscription.plan !== expectedPlan) {
+      return false;
+    }
+
+    const bypassCredits =
+      process.env.NODE_ENV === "development" &&
+      process.env.BYPASS_CREDITS === "true";
+
+    if (!bypassCredits) {
+      await this.canAfford(user, CREDIT_COSTS.INTERVIEW);
+    }
+
+    await this.deduct(userId, CREDIT_COSTS.INTERVIEW, { session });
+    return true;
   },
 
   /**
