@@ -21,6 +21,14 @@ const userRepository = {
     return User.findByIdAndUpdate(id, data, { returnDocument: "after", runValidators: true, ...options });
   },
 
+  async updateMatching(filter, data, options = {}) {
+    return User.findOneAndUpdate(filter, data, {
+      returnDocument: "after",
+      runValidators: true,
+      ...options,
+    });
+  },
+
   async existsByEmail(email) {
     return User.exists({ email });
   },

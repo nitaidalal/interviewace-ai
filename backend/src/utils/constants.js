@@ -27,6 +27,23 @@ export const PLAN_LIMITS = {
   },
 }
 
+// ─── Payment Plans ──────────────────────────────────────
+export const PAYMENT_PLANS = {
+  monthly: {
+    name: "Pro Monthly",
+    amount: 29900,
+    currency: "INR",
+    ...PLAN_LIMITS.pro.monthly,
+  },
+
+  "6months": {
+    name: "Pro Six Months",
+    amount: 99900,
+    currency: "INR",
+    ...PLAN_LIMITS.pro.sixMonths,
+  },
+};
+
 // ─── Questions Per Interview ──────────────────────────────────────
 export const QUESTIONS_PER_PLAN = {
   free: 5,
