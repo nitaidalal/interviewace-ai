@@ -8,6 +8,7 @@ import v1Routes from "./routes/index.js";
 import ApiError from "./utils/ApiError.js";
 import globalErrorHandler from "./middlewares/errorHandler.middleware.js";
 import { globalLimiter } from "./middlewares/rateLimiter.middleware.js";
+import { handleWebhook } from "./controllers/payment.controller.js";
 
 const app = express();
 
@@ -16,6 +17,16 @@ app.use(
 		origin: process.env.CLIENT_URL.split(",") ,
 		credentials: true,
 	}),
+);
+
+// Razorpay webhook must receive the original raw body
+app.post(
+  "/api/v1/payments/webhook",
+  express.raw({
+    type: "application/json",
+    limit: "1mb",
+  }),
+  handleWebhook,
 );
 
 app.use(globalLimiter);
