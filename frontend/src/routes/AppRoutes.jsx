@@ -25,6 +25,7 @@ const InterviewHistoryPage = lazy(
   () => import("../pages/InterviewHistoryPage.jsx"),
 );
 const ATSPage = lazy(() => import("../pages/ATSPage.jsx"));
+const BillingPage = lazy(() => import("../pages/BillingPage.jsx"));
 
 
 // Placeholders — replaced in future phases
@@ -87,7 +88,7 @@ const AppRoutes = () => {
           {/* Billing — Phase 6 */}
           <Route
             path={ROUTES.BILLING}
-            element={<PlaceholderPage title="Billing — Phase 6" />}
+            element={<BillingPage />}
           />
         </Route>
 

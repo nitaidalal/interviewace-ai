@@ -8,6 +8,7 @@ import {
   MdOutlinePerson,
   MdOutlineLogout,
   MdOutlineWorkspacePremium,
+  MdOutlineReceiptLong,
 } from "react-icons/md";
 import useAuth from "../../hooks/useAuth.js";
 import useTheme from "../../hooks/useTheme.js";
@@ -20,6 +21,7 @@ const navItems = [
   { label: "AI Interview", href: ROUTES.INTERVIEW, icon: MdOutlineVideoCall },
   { label: "ATS Analyzer", href: ROUTES.ATS, icon: MdOutlineDescription },
   { label: "Profile", href: ROUTES.PROFILE, icon: MdOutlinePerson },
+  { label: "Billing", href: ROUTES.BILLING, icon: MdOutlineReceiptLong },
 ];
 
 const Sidebar = ({ collapsed, setCollapsed, compact = false }) => {
@@ -28,6 +30,7 @@ const Sidebar = ({ collapsed, setCollapsed, compact = false }) => {
   const navigate = useNavigate();
   const { user, isLoading } = useSelector((state) => state.auth);
   const isPro = user?.subscription?.plan === "pro";
+  const remainingCredits = user?.usage?.remainingCredits;
   const initials = user?.name
     ? user.name
         .split(" ")
@@ -140,7 +143,7 @@ const Sidebar = ({ collapsed, setCollapsed, compact = false }) => {
           <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="p-3 rounded-2xl flex flex-col gap-3"
+            className="mx-2 p-3 rounded-2xl flex flex-col gap-3"
             style={{
               background:
                 "linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent)",
@@ -166,9 +169,9 @@ const Sidebar = ({ collapsed, setCollapsed, compact = false }) => {
               </div>
             ) : user ? (
               <>
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                    className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                     style={{
                       background: isPro
                         ? "linear-gradient(135deg, #f59e0b, #f97316)"
@@ -195,39 +198,43 @@ const Sidebar = ({ collapsed, setCollapsed, compact = false }) => {
                   <div className="min-w-0 flex-1">
                     <p
                       className="text-sm font-semibold truncate"
+                      title={user.name}
                       style={{ color: "var(--color-text-primary)" }}
                     >
                       {user.name}
                     </p>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
-                        style={{
-                          backgroundColor: isPro
-                            ? "color-mix(in srgb, #f59e0b 15%, transparent)"
-                            : "color-mix(in srgb, var(--color-text-muted) 12%, transparent)",
-                          color: isPro ? "#f59e0b" : "var(--color-text-muted)",
-                        }}
-                      >
-                        {isPro ? (
-                          <>
-                            <HiSparkles size={10} /> Pro Plan
-                          </>
-                        ) : (
-                          <>
-                            <MdOutlineWorkspacePremium size={10} /> Free Plan
-                          </>
-                        )}
-                      </span>
-                      {user.email && (
-                        <span
-                          className="text-[11px] truncate"
-                          style={{ color: "var(--color-text-muted)" }}
+                    {isPro ? (
+                      user.email && (
+                        <p
+                          className="mt-0.5 text-[11px] truncate"
+                          style={{ color: "var(--color-text-secondary)" }}
+                          title={user.email}
                         >
                           {user.email}
+                        </p>
+                      )
+                    ) : (
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
+                          style={{
+                            backgroundColor:
+                              "color-mix(in srgb, var(--color-text-muted) 12%, transparent)",
+                            color: "var(--color-text-muted)",
+                          }}
+                        >
+                          <MdOutlineWorkspacePremium size={10} /> Free Plan
                         </span>
-                      )}
-                    </div>
+                        {user.email && (
+                          <span
+                            className="text-[11px] truncate"
+                            style={{ color: "var(--color-text-muted)" }}
+                          >
+                            {user.email}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -248,20 +255,40 @@ const Sidebar = ({ collapsed, setCollapsed, compact = false }) => {
 
                 {isPro && (
                   <div
-                    className="flex items-center justify-between px-3 py-2 rounded-xl text-xs"
+                    className="flex items-center justify-between gap-2 pt-2.5"
                     style={{
-                      backgroundColor:
-                        "color-mix(in srgb, var(--color-primary) 10%, transparent)",
-                      color: "var(--color-text-secondary)",
+                      borderTop:
+                        "1px solid color-mix(in srgb, var(--color-primary) 16%, var(--color-border))",
                     }}
                   >
-                    <span className="flex items-center gap-2">
-                      <HiSparkles size={12} style={{ color: "#f59e0b" }} />
-                      Pro features unlocked
+                    <span
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-bold tracking-wide"
+                      style={{
+                        background: "linear-gradient(135deg, #fbbf24, #fb923c)",
+                        color: "#431407",
+                        boxShadow: "0 2px 8px rgba(249, 115, 22, 0.15)",
+                      }}
+                    >
+                      <HiSparkles size={13} aria-hidden="true" />
+                      PRO
                     </span>
-                    <span style={{ color: "var(--color-text-muted)" }}>
-                      Manage in Billing
-                    </span>
+                    <div
+                      className="min-w-0 text-right"
+                      aria-label={
+                        Number.isFinite(remainingCredits)
+                          ? `${remainingCredits.toLocaleString("en-IN")} credits remaining`
+                          : "Remaining credits unavailable"
+                      }
+                    >
+                      <p className="text-sm font-bold leading-5 tabular-nums text-text-primary">
+                        {Number.isFinite(remainingCredits)
+                          ? remainingCredits.toLocaleString("en-IN")
+                          : "—"}
+                      </p>
+                      <p className="text-[10px] leading-4 text-text-secondary">
+                        credits left
+                      </p>
+                    </div>
                   </div>
                 )}
               </>

@@ -7,6 +7,7 @@ import { RiCoinLine } from "react-icons/ri";
 import Button from "../../components/ui/Button.jsx";
 import Badge from "../../components/ui/Badge.jsx";
 import { ROUTES, PRICING, CREDIT_COSTS } from "../../utils/constants.js";
+import { useSelector } from "react-redux";
 
 const freeFeatures = [
   { text: "100 credits / month", included: true },
@@ -37,6 +38,8 @@ const proFeatures = [
 const PricingSection = () => {
   const navigate = useNavigate();
   const [billing, setBilling] = useState("monthly");
+
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
   const proPrice =
     billing === "monthly" ? PRICING.pro.monthly : PRICING.pro.sixMonths;
@@ -317,7 +320,9 @@ const PricingSection = () => {
 
             <Button
               fullWidth
-              onClick={() => navigate(ROUTES.REGISTER)}
+              onClick={() =>
+                navigate(isAuthenticated ? ROUTES.BILLING : ROUTES.REGISTER)
+              }
               className="mb-6"
             >
               Upgrade to Pro
@@ -330,9 +335,11 @@ const PricingSection = () => {
                     size={16}
                     style={{ color: "var(--color-success)", flexShrink: 0 }}
                   />
-                  <span style={{ color: "var(--color-text-primary)" }}>
-                    {f.text}
-                  </span>
+                  {f.text === "1500 credits / month"
+                    ? billing === "monthly"
+                      ? "1500 credits / 30 days"
+                      : "9000 credits / 180 days"
+                    : f.text}
                 </li>
               ))}
             </ul>
