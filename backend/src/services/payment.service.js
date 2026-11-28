@@ -334,8 +334,19 @@ const paymentService = {
   },
 
   // 7. Retrieve payment history
-  async getPaymentHistory(userId) {
-    return paymentRepository.findByUser(userId);
+  async getPaymentHistory(userId, page = 1) {
+    const pageNumber = Number(page);
+
+    if (
+      !["string", "number"].includes(typeof page) ||
+      (typeof page === "string" && !/^[1-9]\d*$/.test(page)) ||
+      !Number.isSafeInteger(pageNumber) ||
+      pageNumber < 1
+    ) {
+      throw new ApiError(400, "Page must be a positive integer");
+    }
+
+    return paymentRepository.findByUser(userId, pageNumber);
   },
 };
 

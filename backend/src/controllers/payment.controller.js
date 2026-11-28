@@ -50,13 +50,16 @@ export const reconcilePayment = asynchandler(async (req, res) => {
 
 // GET /payments/history
 export const getPaymentHistory = asynchandler(async (req, res) => {
-  const payments = await paymentService.getPaymentHistory(req.user.id);
+  const result = await paymentService.getPaymentHistory(
+    req.user.id,
+    req.query.page,
+  );
   res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        { payments },
+        result,
         "Payment history fetched successfully",
       ),
     );

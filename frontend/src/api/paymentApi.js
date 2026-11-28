@@ -11,5 +11,5 @@ export const verifyPayment = (paymentData) =>
 export const reconcilePayment = (orderId) => 
     axiosInstance.post("/payments/reconcile", { orderId });
 
-export const getPaymentHistory = () =>
-    axiosInstance.get("/payments/history");
+export const getPaymentHistory = (page = 1) =>
+    axiosInstance.get("/payments/history", { params: { page } });
