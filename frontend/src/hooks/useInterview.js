@@ -8,7 +8,7 @@ import {
   abandonInterview as abandonInterviewApi,
   getSession,
 } from "../api/interviewApi.js";
-import { getRetryAt, parseApiError } from "../utils/errorParser.js";
+import { parseApiError } from "../utils/errorParser.js";
 import { ROUTES } from "../utils/constants.js";
 import { enterInterviewFullscreen, exitInterviewFullscreen } from "../utils/interviewFullscreen.js";
 
@@ -26,9 +26,6 @@ const useInterview = () => {
   const [sessionData, setSessionData] = useState(null);
   const [status, setStatus] = useState("idle");
   const [pendingNextQuestion, setPendingNextQuestion] = useState(null);
-  const [sessionLoadError, setSessionLoadError] = useState(null);
-  const fetchingSessionRef = useRef(false);
-  const sessionRetryAtRef = useRef(null);
 
   // Ref to avoid stale closure in revealNextQuestion
   const pendingNextQuestionRef = useRef(null);
@@ -248,9 +245,6 @@ const useInterview = () => {
   // ─── Fetch Session (page refresh recovery) ───────────────────
 
   const fetchSession = useCallback(async (id) => {
-    if (fetchingSessionRef.current || Date.now() < sessionRetryAtRef.current) return;
-    fetchingSessionRef.current = true;
-    setSessionLoadError(null);
     setStatus("loading");
     try {
       const res = await getSession(id);
@@ -291,14 +285,8 @@ const useInterview = () => {
       );
       setStatus(session.status === "active" ? "active" : "done");
     } catch (err) {
-      const message = parseApiError(err);
-      const retryAt = getRetryAt(err);
-      sessionRetryAtRef.current = retryAt;
-      setSessionLoadError({ message, retryAt });
-      setStatus("load_failed");
-      toast.error(message, { id: "interview-load-error" });
-    } finally {
-      fetchingSessionRef.current = false;
+      toast.error(parseApiError(err));
+      setStatus("idle");
     }
   }, [handleInactiveSession]);
 
@@ -314,7 +302,6 @@ const useInterview = () => {
     totalQuestions,
     isLastQuestion,
     sessionData,
-    sessionLoadError,
     status,
     pendingNextQuestion,
     startInterview,

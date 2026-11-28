@@ -7,7 +7,6 @@ import morgan from "morgan";
 import v1Routes from "./routes/index.js";
 import ApiError from "./utils/ApiError.js";
 import globalErrorHandler from "./middlewares/errorHandler.middleware.js";
-import { globalLimiter } from "./middlewares/rateLimiter.middleware.js";
 import { handleWebhook } from "./controllers/payment.controller.js";
 
 const app = express();
@@ -16,7 +15,6 @@ app.use(
 	cors({
 		origin: process.env.CLIENT_URL.split(",") ,
 		credentials: true,
-		exposedHeaders: ["Retry-After"],
 	}),
 );
 
@@ -29,8 +27,6 @@ app.post(
   }),
   handleWebhook,
 );
-
-app.use(globalLimiter);
 
 app.use(helmet());
 app.use(express.json({ limit: "5mb" }));

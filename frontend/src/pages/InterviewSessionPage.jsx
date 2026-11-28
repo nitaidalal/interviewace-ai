@@ -456,7 +456,6 @@ const InterviewSessionPage = () => {
     pendingNextQuestion,
     revealNextQuestion,
     greeting,
-    sessionLoadError,
   } = useInterview();
 
   const {
@@ -489,7 +488,6 @@ const InterviewSessionPage = () => {
   const [answer, setAnswer] = useState("");
   const [localShowAbandon, setShowAbandon] = useState(false);
   const [isAbandoning, setIsAbandoning] = useState(false);
-  const [retryNow, setRetryNow] = useState(Date.now);
   const [timerKey, setTimerKey] = useState(0);
   const [timerPaused, setTimerPaused] = useState(true);
   const [aiState, setAiState] = useState("idle");
@@ -507,13 +505,6 @@ const InterviewSessionPage = () => {
   const showAbandon = localShowAbandon || exitRequested;
   const fullscreenBlocked = !isFullscreen;
   const sessionBlocked = fullscreenBlocked || showAbandon || isAbandoning;
-
-  useEffect(() => {
-    if (!sessionLoadError?.retryAt) return;
-    setRetryNow(Date.now());
-    const timer = window.setInterval(() => setRetryNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, [sessionLoadError]);
 
   useEffect(() => {
     if (sessionBlocked) {
@@ -783,25 +774,6 @@ const InterviewSessionPage = () => {
         <h1 className="text-xl font-semibold">Unable to finish your interview</h1>
         <p>Your saved answers are safe. Completion and any credit refund have not been confirmed.</p>
         <Button onClick={endInterview}>Retry Final Evaluation</Button>
-        <Button variant="secondary" onClick={() => navigate(ROUTES.INTERVIEW_HISTORY)}>
-          Go to Interview History
-        </Button>
-      </div>
-    );
-  }
-
-  if (status === "load_failed") {
-    const retrySeconds = Math.max(0, Math.ceil(((sessionLoadError?.retryAt ?? 0) - retryNow) / 1000));
-    return (
-      <div role="alert" className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
-        <h1 className="text-xl font-semibold">Unable to load your interview</h1>
-        <p className="max-w-lg text-text-secondary">{sessionLoadError?.message}</p>
-        <p className="text-sm text-text-secondary">Retry loading this session instead of starting another interview.</p>
-        <Button onClick={() => fetchSession(id)} disabled={retrySeconds > 0}>
-          {retrySeconds > 0
-            ? `Retry in ${Math.floor(retrySeconds / 60)}:${String(retrySeconds % 60).padStart(2, "0")}`
-            : "Retry loading interview"}
-        </Button>
         <Button variant="secondary" onClick={() => navigate(ROUTES.INTERVIEW_HISTORY)}>
           Go to Interview History
         </Button>
