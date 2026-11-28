@@ -146,10 +146,18 @@ const useRecorder = () => {
     return promise;
   }, [releaseMic, stopLevelMonitor, transcribe]);
 
-  // Turn the mic off if the user leaves the page mid-recording
+  const pauseRecording = useCallback(() => {
+    if (recorderRef.current?.state === "recording") recorderRef.current.pause();
+  }, []);
+
+  const resumeRecording = useCallback(() => {
+    if (recorderRef.current?.state === "paused") recorderRef.current.resume();
+  }, []);
+
+  // Turn the mic off if the user leaves the page mid-recording.
   useEffect(() => {
     return () => {
-      if (recorderRef.current?.state === "recording")
+      if (["recording", "paused"].includes(recorderRef.current?.state))
         recorderRef.current.stop();
       releaseMic();
       stopLevelMonitor();
@@ -163,6 +171,8 @@ const useRecorder = () => {
     isSupported,
     startRecording,
     stopRecording,
+    pauseRecording,
+    resumeRecording,
   };
 };
 

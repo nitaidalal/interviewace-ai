@@ -26,6 +26,16 @@ const usePayment = () => {
 
   const [plans, setPlans] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    totalItems: 0,
+    totalPages: 1,
+    hasPreviousPage: false,
+    hasNextPage: false,
+  });
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
   const [credits, setCredits] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -35,28 +45,55 @@ const usePayment = () => {
 
   // Prevent simultaneous payment attempts in this UI
   const paymentLockRef = useRef(false);
+  const historyPageRef = useRef(1);
+  const historyRequestRef = useRef(0);
+
+  const fetchPaymentHistory = useCallback(async (page = historyPageRef.current) => {
+    const requestId = ++historyRequestRef.current;
+    setHistoryLoading(true);
+    setHistoryError(null);
+
+    try {
+      const response = await getPaymentHistory(page);
+
+      // Only the latest request may replace the visible history page.
+      if (requestId === historyRequestRef.current) {
+        const data = response.data.data;
+        setPayments(data.payments);
+        setPagination(data.pagination);
+        historyPageRef.current = data.pagination.page;
+      }
+    } catch (error) {
+      if (requestId === historyRequestRef.current) {
+        setHistoryError(parseApiError(error));
+      }
+      throw error;
+    } finally {
+      if (requestId === historyRequestRef.current) {
+        setHistoryLoading(false);
+      }
+    }
+  }, []);
 
   // ─── Fetch billing data ──────────────────────────
 
-  const refreshBilling = useCallback(async () => {
+  const refreshBilling = useCallback(async (historyPage) => {
     // Existing endpoint refreshes subscription expiry
     // and daily credit usage when necessary.
     const creditsResponse = await getCredits();
 
     setCredits(creditsResponse.data.data.credits);
 
-    const [profileResponse, historyResponse] = await Promise.all([
+    const [profileResponse] = await Promise.all([
       getProfile(),
-      getPaymentHistory(),
+      fetchPaymentHistory(historyPage),
     ]);
 
     const latestUser = profileResponse.data.data.user;
 
     // Update Redux so Sidebar and other pages reflect Pro
     dispatch(setUser(latestUser));
-
-    setPayments(historyResponse.data.data.payments);
-  }, [dispatch]);
+  }, [dispatch, fetchPaymentHistory]);
 
   const fetchBilling = useCallback(async () => {
     setLoading(true);
@@ -78,6 +115,17 @@ const usePayment = () => {
   useEffect(() => {
     fetchBilling();
   }, [fetchBilling]);
+
+  const changeHistoryPage = async (page) => {
+    if (paymentLockRef.current || historyLoading) return;
+    if (page < 1 || page > pagination.totalPages) return;
+
+    try {
+      await fetchPaymentHistory(page);
+    } catch {
+      // Keep the current page visible and show a retry action in the history.
+    }
+  };
 
   // ─── Release payment lock ────────────────────────
 
@@ -161,7 +209,7 @@ const usePayment = () => {
             toast.success(
               "Payment verified! Your Pro purchase has been applied.",
             );
-          } catch (error) {
+          } catch {
             // A verification/network failure does not
             // prove that the actual payment failed.
             toast.error(
@@ -169,7 +217,7 @@ const usePayment = () => {
             );
           } finally {
             try {
-              await refreshBilling();
+              await refreshBilling(1);
             } catch {
               toast.error(
                 "Unable to refresh billing. Please refresh the page.",
@@ -192,7 +240,7 @@ const usePayment = () => {
             );
 
             try {
-              await refreshBilling();
+              await refreshBilling(1);
             } catch {
               // The history can be refreshed manually
             } finally {
@@ -229,7 +277,7 @@ const usePayment = () => {
 
       // An order may already have been created
       try {
-        await refreshBilling();
+        await refreshBilling(1);
       } catch {
         // The user can refresh later
       }
@@ -274,6 +322,10 @@ const usePayment = () => {
     user,
     plans,
     payments,
+    pagination,
+    historyLoading,
+    historyError,
+    changeHistoryPage,
     credits,
     loading,
     busy,

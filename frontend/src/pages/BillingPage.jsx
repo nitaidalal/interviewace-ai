@@ -53,6 +53,10 @@ const BillingPage = () => {
     user,
     plans,
     payments,
+    pagination,
+    historyLoading,
+    historyError,
+    changeHistoryPage,
     credits,
     loading,
     busy,
@@ -123,7 +127,11 @@ const BillingPage = () => {
           </p>
         </div>
 
-        <Button variant="secondary" onClick={fetchBilling} disabled={busy}>
+        <Button
+          variant="secondary"
+          onClick={fetchBilling}
+          disabled={busy || historyLoading}
+        >
           <HiRefresh size={17} />
           Refresh
         </Button>
@@ -366,7 +374,7 @@ const BillingPage = () => {
             <Button
               fullWidth
               size="lg"
-              disabled={busy || !user}
+              disabled={busy || historyLoading || !user}
               loading={busy && activeCycle === billingCycle}
               onClick={() => purchasePlan(billingCycle)}
             >
@@ -390,7 +398,7 @@ const BillingPage = () => {
 
       {/* Payment history */}
 
-      <div>
+      <div aria-busy={historyLoading}>
         <h2
           className="text-xl font-bold mb-4"
           style={{
@@ -411,7 +419,27 @@ const BillingPage = () => {
           </p>
         )}
 
-        {payments.length === 0 ? (
+        {historyError && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl p-4 mb-4"
+            style={panelStyle}
+          >
+            <p className="text-sm text-danger">
+              Unable to load payment history. {historyError}
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={busy || historyLoading}
+              onClick={() => changeHistoryPage(pagination.page)}
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {payments.length === 0 && !historyError && (
           <div className="rounded-2xl p-10 text-center" style={panelStyle}>
             <p
               className="font-semibold mb-1"
@@ -431,7 +459,9 @@ const BillingPage = () => {
               Your payment history will appear here.
             </p>
           </div>
-        ) : (
+        )}
+
+        {payments.length > 0 && (
           <div className="rounded-2xl overflow-x-auto" style={panelStyle}>
             <table className="w-full text-sm text-left">
               <thead
@@ -501,7 +531,7 @@ const BillingPage = () => {
                         <Button
                           variant="secondary"
                           size="sm"
-                          disabled={busy}
+                          disabled={busy || historyLoading}
                           loading={checkingOrderId === payment.razorpayOrderId}
                           onClick={() =>
                             checkPaymentStatus(payment.razorpayOrderId)
@@ -525,6 +555,48 @@ const BillingPage = () => {
               </tbody>
             </table>
           </div>
+        )}
+
+        {payments.length > 0 && (
+          <nav
+            aria-label="Payment history pagination"
+            className="mt-4 flex flex-wrap items-center justify-between gap-3"
+          >
+            <p className="text-xs text-text-secondary">
+              Showing {(pagination.page - 1) * pagination.limit + 1}
+              {"–"}
+              {Math.min(pagination.page * pagination.limit, pagination.totalItems)}
+              {" of "}
+              {pagination.totalItems} orders
+            </p>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={busy || historyLoading || !pagination.hasPreviousPage}
+                onClick={() => changeHistoryPage(pagination.page - 1)}
+              >
+                Previous
+              </Button>
+              <span
+                role="status"
+                aria-live="polite"
+                className="text-sm text-text-secondary whitespace-nowrap"
+              >
+                {historyLoading
+                  ? "Loading history…"
+                  : `Page ${pagination.page} of ${pagination.totalPages}`}
+              </span>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={busy || historyLoading || !pagination.hasNextPage}
+                onClick={() => changeHistoryPage(pagination.page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </nav>
         )}
       </div>
     </div>

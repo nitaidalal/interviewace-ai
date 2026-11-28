@@ -30,6 +30,35 @@ const AIPresenter = ({ aiState = "idle", large = false }) => {
   const avatarSize = large ? "w-32 h-32" : "w-20 h-20";
   const waveCount = large ? 11 : 9;
 
+  if (large) {
+    return (
+      <div className="relative h-full w-full overflow-hidden">
+        <img
+          src="/interviewAceAi-image.png"
+          alt="AI Interviewer"
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-sm font-medium text-white">
+          <motion.span
+            className="h-2 w-2 rounded-full"
+            style={{
+              backgroundColor: aiState === "speaking"
+                ? "var(--color-primary)"
+                : aiState === "listening"
+                  ? "var(--color-success)"
+                  : aiState === "thinking"
+                    ? "var(--color-warning)"
+                    : "var(--color-text-muted)",
+            }}
+            animate={aiState !== "idle" ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
+            transition={{ duration: 1, repeat: Infinity }}
+          />
+          {STATE_LABELS[aiState]}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center gap-3 w-full">
       <div className="relative flex items-center justify-center w-full">

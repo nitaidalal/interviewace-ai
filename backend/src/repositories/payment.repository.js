@@ -38,13 +38,30 @@ const paymentRepository = {
     );
   },
 
-  async findByUser(userId) {
-    return Payment.find({
-      user: userId,
-    })
-      .sort({ createdAt: -1 })
-      .limit(50)
+  async findByUser(userId, page = 1) {
+    const limit = 10;
+    const filter = { user: userId };
+    const totalItems = await Payment.countDocuments(filter);
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    const currentPage = Math.min(page, totalPages);
+
+    const payments = await Payment.find(filter)
+      .sort({ createdAt: -1, _id: -1 })
+      .skip((currentPage - 1) * limit)
+      .limit(limit)
       .lean();
+
+    return {
+      payments,
+      pagination: {
+        page: currentPage,
+        limit,
+        totalItems,
+        totalPages,
+        hasPreviousPage: currentPage > 1,
+        hasNextPage: currentPage < totalPages,
+      },
+    };
   },
 };
 
