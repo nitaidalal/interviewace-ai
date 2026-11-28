@@ -16,6 +16,7 @@ app.use(
 	cors({
 		origin: process.env.CLIENT_URL.split(",") ,
 		credentials: true,
+		exposedHeaders: ["Retry-After"],
 	}),
 );
 
