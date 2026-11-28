@@ -69,7 +69,7 @@ const LeftPanel = ({
 
   return (
     <div
-      className="flex flex-col gap-4 h-full p-4"
+      className="flex flex-col gap-4 h-full min-h-0 p-4"
       style={{
         backgroundColor: "var(--color-surface)",
         borderRight: "1px solid var(--color-border)",
@@ -77,13 +77,11 @@ const LeftPanel = ({
     >
       {/* AI Avatar — large slot for future real image */}
       <div
-        className="rounded-2xl overflow-hidden flex-1 flex items-center
+        className="rounded-2xl overflow-hidden flex-1 min-h-0 flex items-center
           justify-center relative"
         style={{
           backgroundColor: "var(--color-media-bg)",
           border: "1px solid var(--color-border)",
-          minHeight: "200px",
-          maxHeight: "340px",
         }}
       >
         {/* 
@@ -97,11 +95,10 @@ const LeftPanel = ({
 
       {/* User webcam */}
       <div
-        className="rounded-2xl overflow-hidden relative shrink-0"
+        className="rounded-2xl overflow-hidden relative flex-1 min-h-0"
         style={{
           backgroundColor: "var(--color-media-bg)",
           border: "1px solid var(--color-border)",
-          height: "160px",
         }}
       >
         {/* Live video */}
@@ -158,7 +155,7 @@ const LeftPanel = ({
 
       {/* Controls */}
       <div
-        className="flex items-center justify-center gap-6 pt-2"
+        className="flex shrink-0 items-center justify-center gap-6 pt-2"
         style={{ borderTop: "1px solid var(--color-border)" }}
       >
         {isVoiceSupported && (

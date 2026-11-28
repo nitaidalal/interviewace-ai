@@ -10,6 +10,7 @@ import {
 } from "../api/interviewApi.js";
 import { parseApiError } from "../utils/errorParser.js";
 import { ROUTES } from "../utils/constants.js";
+import { enterInterviewFullscreen, exitInterviewFullscreen } from "../utils/interviewFullscreen.js";
 
 const useInterview = () => {
   const navigate = useNavigate();
@@ -84,7 +85,11 @@ const useInterview = () => {
     async (settings) => {
       terminalRef.current = false;
       setStatus("loading");
+      let fullscreenStarted = false;
       try {
+        // Request before the API call, while the Start click grants user activation.
+        await enterInterviewFullscreen();
+        fullscreenStarted = true;
         const res = await startInterviewApi(settings);
         const data = res.data.data;
 
@@ -119,7 +124,8 @@ const useInterview = () => {
         navigate(`/dashboard/interview/${data.sessionId}/session`);
       } catch (err) {
         setStatus("idle");
-        toast.error(parseApiError(err));
+        await exitInterviewFullscreen();
+        toast.error(fullscreenStarted ? parseApiError(err) : err.message);
       }
     },
     [navigate],
@@ -219,7 +225,7 @@ const useInterview = () => {
   // ─── Abandon Interview ────────────────────────────────────────
 
   const abandonInterview = useCallback(async () => {
-    if (!sessionId || terminalRef.current) return;
+    if (!sessionId || terminalRef.current) return false;
     try {
       await abandonInterviewApi(sessionId);
       terminalRef.current = true;
@@ -228,10 +234,13 @@ const useInterview = () => {
       toast.success(
         "Interview abandoned. Credits refunded if no answers given.",
       );
-    } catch {
-      navigate(ROUTES.DASHBOARD);
+      return true;
+    } catch (error) {
+      if (handleSessionError(error)) return true;
+      toast.error("Unable to end the interview. Please confirm again to retry.");
+      return false;
     }
-  }, [sessionId, navigate]);
+  }, [sessionId, navigate, handleSessionError]);
 
   // ─── Fetch Session (page refresh recovery) ───────────────────
 
