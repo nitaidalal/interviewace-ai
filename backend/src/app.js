@@ -37,10 +37,10 @@ if (process.env.NODE_ENV !== "production") {
 	app.use(morgan("dev"));
 }
 
-app.get("/health", (req, res) => {
+app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "AceInterviewAI API is running",
+    message: "InterviewAceAI API is running",
     environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
   });
