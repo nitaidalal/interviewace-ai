@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion as Motion } from "framer-motion";
 import {
   MdOutlineVideoCall,
@@ -9,6 +10,7 @@ import { RiCoinLine } from "react-icons/ri";
 import { HiSparkles } from "react-icons/hi2";
 import Button from "../../../components/ui/Button.jsx";
 import { CREDIT_COSTS } from "../../../utils/constants.js";
+import { prepareInterviewCamera } from "../../../utils/interviewCamera.js";
 
 const SummaryRow = ({ icon, label, value, highlight }) => {
   const Icon = icon;
@@ -37,6 +39,16 @@ const SummaryRow = ({ icon, label, value, highlight }) => {
 };
 
 const InterviewSummary = ({ settings, onStart, loading, isPro }) => {
+  const [cameraReady, setCameraReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    prepareInterviewCamera().then(() => {
+      if (mounted) setCameraReady(true);
+    });
+    return () => { mounted = false; };
+  }, []);
+
   const {
     mode,
     role,
@@ -149,6 +161,7 @@ const InterviewSummary = ({ settings, onStart, loading, isPro }) => {
         </div>
 
         <p className="px-5 pb-4 text-xs text-text-secondary">
+          {!cameraReady && "Please allow or block camera access before starting. "}
           The interview opens in fullscreen. Exiting fullscreen pauses the session
           and asks you to return or confirm termination.
         </p>
@@ -158,12 +171,13 @@ const InterviewSummary = ({ settings, onStart, loading, isPro }) => {
           <Button
             fullWidth
             size="lg"
-            loading={loading}
+            loading={loading || !cameraReady}
+            disabled={!cameraReady}
             onClick={onStart}
             className="gap-2"
           >
             <HiSparkles size={16} />
-            Start Interview
+            {cameraReady ? "Start Interview" : "Preparing camera..."}
           </Button>
         </div>
       </div>

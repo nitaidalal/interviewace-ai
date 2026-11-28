@@ -15,9 +15,10 @@ import { getHistory } from "../api/interviewApi.js";
 import { getATSHistory } from "../api/atsApi.js";
 import { CREDIT_COSTS, ROUTES } from "../utils/constants.js";
 
+const MotionLink = Motion.create(Link);
+
 const dateLabel = (value) => new Date(value).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 const interviewTitle = (s) => s.settings?.mode === "hr" ? "HR interview" : `${s.settings?.role || "Technical"} interview`;
-const MotionLink = Motion.create(Link);
 
 function DashboardPage() {
   const reducedMotion = useReducedMotion();
@@ -90,12 +91,18 @@ function DashboardPage() {
           What would you like to work on?
         </h2>
         <div className="grid grid-cols-1 gap-4 min-[701px]:grid-cols-2">
+          <Motion.div
+            initial={reducedMotion ? false : { y: 18, scale: 0.98 }}
+            animate={{ y: 0, scale: 1 }}
+            transition={{ duration: reducedMotion ? 0 : 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="flex min-w-0 flex-col [&>a]:flex-1"
+          >
           <MotionLink
-            {...entrance(0.05)}
             whileHover={reducedMotion ? undefined : { y: -4 }}
             whileTap={reducedMotion ? undefined : { scale: 0.99 }}
+            transition={{ type: "spring", stiffness: 220, damping: 24, mass: 0.8 }}
             to={ROUTES.INTERVIEW}
-            className="group relative flex min-h-[232px] flex-col overflow-hidden rounded-2xl border border-border bg-surface p-5 !text-text-primary shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:p-6"
+            className="group relative flex min-h-[232px] flex-col overflow-hidden rounded-2xl border border-border bg-surface p-5 !text-text-primary shadow-sm transition-[border-color,box-shadow] duration-300 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:p-6"
           >
             <div
               className="pointer-events-none absolute -right-16 -top-20 size-44 rounded-full opacity-60 blur-3xl"
@@ -120,12 +127,19 @@ function DashboardPage() {
               <span className="text-xs text-text-muted">{CREDIT_COSTS.INTERVIEW} credits / session</span>
             </div>
           </MotionLink>
+          </Motion.div>
+          <Motion.div
+            initial={reducedMotion ? false : { y: 18, scale: 0.98 }}
+            animate={{ y: 0, scale: 1 }}
+            transition={{ duration: reducedMotion ? 0 : 0.45, delay: reducedMotion ? 0 : 0.08, ease: [0.22, 1, 0.36, 1] }}
+            className="flex min-w-0 flex-col [&>a]:flex-1"
+          >
           <MotionLink
-            {...entrance(0.1)}
             whileHover={reducedMotion ? undefined : { y: -4 }}
             whileTap={reducedMotion ? undefined : { scale: 0.99 }}
+            transition={{ type: "spring", stiffness: 220, damping: 24, mass: 0.8 }}
             to={ROUTES.ATS}
-            className="group relative flex min-h-[232px] flex-col overflow-hidden rounded-2xl border border-border bg-surface p-5 !text-text-primary shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:p-6"
+            className="group relative flex min-h-[232px] flex-col overflow-hidden rounded-2xl border border-border bg-surface p-5 !text-text-primary shadow-sm transition-[border-color,box-shadow] duration-300 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:p-6"
           >
             <div
               className="pointer-events-none absolute -right-16 -top-20 size-44 rounded-full opacity-60 blur-3xl"
@@ -150,6 +164,7 @@ function DashboardPage() {
               <span className="text-xs text-text-muted">{CREDIT_COSTS.ATS_ANALYSIS} credits / analysis</span>
             </div>
           </MotionLink>
+          </Motion.div>
         </div>
       </section>
 

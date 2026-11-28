@@ -1,3 +1,13 @@
+export const getRetryAt = (error, now = Date.now()) => {
+  if (error.response?.status !== 429) return null;
+  const header = error.response.headers?.["retry-after"];
+  const seconds = header == null ? NaN : Number(header);
+  if (Number.isFinite(seconds) && seconds >= 0) return now + seconds * 1000;
+  const date = header ? Date.parse(header) : NaN;
+  if (Number.isFinite(date)) return Math.max(now, date);
+  return now + 15 * 60 * 1000;
+};
+
 export const parseApiError = (error) => {
   if (!error.response) {
     return "Connection failed. Please check your internet connection.";
