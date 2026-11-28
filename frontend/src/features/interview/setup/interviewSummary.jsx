@@ -149,7 +149,8 @@ const InterviewSummary = ({ settings, onStart, loading, isPro }) => {
         </div>
 
         <p className="px-5 pb-4 text-xs text-text-secondary">
-          The interview opens in fullscreen. Exiting fullscreen will result in session termination.
+          The interview opens in fullscreen. Exiting fullscreen pauses the session
+          and asks you to return or confirm termination.
         </p>
 
         {/* Start button */}

@@ -36,20 +36,18 @@ const AIPresenter = ({ aiState = "idle", large = false }) => {
         <img
           src="/interviewAceAi-image.png"
           alt="AI Interviewer"
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover object-top"
         />
         <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-sm font-medium text-white">
           <motion.span
             className="h-2 w-2 rounded-full"
-            style={{
-              backgroundColor: aiState === "speaking"
-                ? "var(--color-primary)"
-                : aiState === "listening"
-                  ? "var(--color-success)"
-                  : aiState === "thinking"
-                    ? "var(--color-warning)"
-                    : "var(--color-text-muted)",
-            }}
+            style={{ backgroundColor: aiState === "speaking"
+              ? "var(--color-primary)"
+              : aiState === "listening"
+                ? "var(--color-success)"
+                : aiState === "thinking"
+                  ? "var(--color-warning)"
+                  : "var(--color-text-muted)" }}
             animate={aiState !== "idle" ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
             transition={{ duration: 1, repeat: Infinity }}
           />

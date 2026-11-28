@@ -821,7 +821,7 @@ const InterviewSessionPage = () => {
       style={{ backgroundColor: "var(--color-bg)" }}
     >
       {/* ── LEFT PANEL — 40% ── */}
-      <div className="w-[40%] shrink-0 h-full hidden md:block">
+      <div className="w-[35%] shrink-0 h-full hidden md:block">
         <LeftPanel
           aiState={aiState}
           videoRef={videoRef}
