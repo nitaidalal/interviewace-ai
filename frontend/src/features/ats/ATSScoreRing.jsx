@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion as Motion } from "framer-Motion";
+import { motion as Motion } from "framer-motion";
 
 const getScoreColor = (score) => {
   if (score >= 80) return "#22C55E";

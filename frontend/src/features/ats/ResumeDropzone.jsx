@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import {motion as  Motion, AnimatePresence } from "framer-Motion";
+import {motion as  Motion, AnimatePresence } from "framer-motion";
 import {
   MdOutlineUploadFile,
   MdOutlineDescription,

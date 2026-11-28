@@ -11,7 +11,7 @@ import ExperienceSelector, {
 } from "../features/interview/setup/ExperienceSelector.jsx";
 import DifficultySelector from "../features/interview/setup/DifficultySelector.jsx";
 import ResumeUpload from "../features/interview/setup/ResumeUpload.jsx";
-import InterviewSummary from "../features/interview/setup/InterviewSummary.jsx";
+import InterviewSummary from "../features/interview/setup/interviewSummary.jsx";
 import Button from "../components/ui/Button.jsx";
 import useInterview from "../hooks/useInterview.js";
 import { ROUTES } from "../utils/constants.js";

@@ -1,4 +1,4 @@
-import {motion as Motion } from 'framer-Motion'
+import {motion as Motion } from 'framer-motion'
 
 const SECTION_LABELS = {
   structure:            'Structure',
