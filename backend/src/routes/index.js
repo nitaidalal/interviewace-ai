@@ -5,6 +5,7 @@ import interviewRoutes from "./interview.routes.js";
 import atsRoutes from "./ats.routes.js";
 import activityRoutes from "./activity.routes.js";
 import speechRoutes from "./speech.routes.js";
+import paymentRoutes from "./payment.routes.js";
 
 
 const router = Router();
@@ -15,5 +16,6 @@ router.use("/interviews", interviewRoutes);
 router.use("/ats", atsRoutes);
 router.use("/activities", activityRoutes);
 router.use("/speech", speechRoutes);
+router.use("/payments", paymentRoutes);
 
 export default router;

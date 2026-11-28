@@ -13,3 +13,4 @@ export const uploadAvatar = (formData) =>
 export const removeAvatar = () => axiosInstance.delete("/users/avatar");
 
 export const getCredits = () => axiosInstance.get("/users/credits");
+

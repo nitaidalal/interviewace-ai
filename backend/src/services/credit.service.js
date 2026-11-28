@@ -39,12 +39,30 @@ const creditService = {
   async resetDailyIfNeeded(user, { session = null } = {}) {
     if (!isNewDay(user.usage.lastDailyReset)) return user;
 
-    const updated = await userRepository.updateById(user._id, {
-      "usage.dailyCreditsUsed": 0,
-      "usage.lastDailyReset": new Date(),
-    }, { session });
+    const updated = await userRepository.updateMatching(
+      {
+        _id: user._id,
+        "usage.lastDailyReset": user.usage.lastDailyReset,
+      },
+      {
+        $set: {
+          "usage.dailyCreditsUsed": 0,
+          "usage.lastDailyReset": new Date(),
+        },
+      },
+      { session },
+    );
 
-    return updated;
+    if (updated) return updated;
+
+    // Another request may already have reset the counter.
+    const latest = await userRepository.findById(user._id, { session });
+
+    if (!latest) {
+      throw new ApiError(404, "User not found");
+    }
+
+    return latest;
   },
 
   /**
@@ -52,7 +70,7 @@ const creditService = {
    * If expired → downgrades user to free plan with fresh free credits.
    */
   async checkSubscriptionExpiry(user, { session = null } = {}) {
-    if (user.subscription.plan === "free") return user;
+    if (user.subscription.plan !== "pro") return user;
     if (!user.subscription.expiresAt) return user;
 
     const now = new Date();
@@ -61,16 +79,37 @@ const creditService = {
     if (now <= expiry) return user;
 
     // Pro expired — downgrade to free
-    const updated = await userRepository.updateById(user._id, {
-      "subscription.plan": "free",
-      "subscription.billingCycle": null,
-      "subscription.isActive": false,
-      "subscription.expiresAt": null,
-      "usage.totalCredits": PLAN_LIMITS.free.totalCredits,
-      "usage.remainingCredits": PLAN_LIMITS.free.totalCredits,
-      "usage.dailyCreditsUsed": 0,
-      "usage.lastDailyReset": new Date(),
-    }, { session });
+    const updated = await userRepository.updateMatching(
+      {
+        _id: user._id,
+        "subscription.plan": "pro",
+        "subscription.expiresAt": user.subscription.expiresAt,
+      },
+      {
+        $set: {
+          "subscription.plan": "free",
+          "subscription.billingCycle": null,
+          "subscription.isActive": false,
+          "subscription.expiresAt": null,
+          "usage.totalCredits": PLAN_LIMITS.free.totalCredits,
+          "usage.remainingCredits": PLAN_LIMITS.free.totalCredits,
+          "usage.dailyCreditsUsed": 0,
+          "usage.lastDailyReset": now,
+        },
+      },
+      { session },
+    );
+
+    if (!updated) {
+      // A payment may have renewed Pro since this user was read.
+      const latest = await userRepository.findById(user._id, { session });
+
+      if (!latest) {
+        throw new ApiError(404, "User not found");
+      }
+
+      return latest;
+    }
 
     console.log(
       `⚠️  Pro subscription expired for user ${user._id}. Downgraded to free.`,
@@ -122,12 +161,16 @@ const creditService = {
    * Deducts credits after a successful feature use.
    */
   async deduct(userId, creditCost, { session = null } = {}) {
-    const updated = await userRepository.updateById(userId, {
-      $inc: {
-        "usage.remainingCredits": -creditCost,
-        "usage.dailyCreditsUsed": creditCost,
+    const updated = await userRepository.updateById(
+      userId,
+      {
+        $inc: {
+          "usage.remainingCredits": -creditCost,
+          "usage.dailyCreditsUsed": creditCost,
+        },
       },
-    }, { session });
+      { session },
+    );
 
     if (!updated) {
       throw new ApiError(404, "User not found");
@@ -182,24 +225,39 @@ const creditService = {
 
   async refundInterview(userId, { session }) {
     if (!session?.inTransaction()) {
-      throw new Error("Interview refunds require an active MongoDB transaction");
+      throw new Error(
+        "Interview refunds require an active MongoDB transaction",
+      );
     }
     const refunded = await userRepository.updateById(
       userId,
       [
-        { $set: {
-          "usage.remainingCredits": {
-            $add: ["$usage.remainingCredits", CREDIT_COSTS.INTERVIEW],
+        {
+          $set: {
+            "usage.remainingCredits": {
+              $add: ["$usage.remainingCredits", CREDIT_COSTS.INTERVIEW],
+            },
+            "usage.dailyCreditsUsed": {
+              $max: [
+                0,
+                {
+                  $subtract: [
+                    "$usage.dailyCreditsUsed",
+                    CREDIT_COSTS.INTERVIEW,
+                  ],
+                },
+              ],
+            },
           },
-          "usage.dailyCreditsUsed": {
-            $max: [0, { $subtract: ["$usage.dailyCreditsUsed", CREDIT_COSTS.INTERVIEW] }],
-          },
-        } },
+        },
       ],
       { session, updatePipeline: true },
     );
     if (!refunded) {
-      throw new ApiError(404, "User not found while refunding interview credits");
+      throw new ApiError(
+        404,
+        "User not found while refunding interview credits",
+      );
     }
     return CREDIT_COSTS.INTERVIEW;
   },
@@ -209,30 +267,89 @@ const creditService = {
    */
   async applyProSubscription(
     userId,
-    { billingCycle, razorpayPaymentId, razorpayOrderId },
+    {
+      billingCycle,
+      razorpayPaymentId,
+      razorpayOrderId,
+      creditsGranted,
+      validityDays,
+    },
+    { session } = {},
   ) {
-    const cycleConfig =
-      billingCycle === "monthly"
-        ? PLAN_LIMITS.pro.monthly
-        : PLAN_LIMITS.pro.sixMonths;
+    // Payment activation must happen inside a transaction
+    if (!session?.inTransaction()) {
+      throw new Error("Pro activation requires an active MongoDB transaction");
+    }
+
+    const user = await userRepository.findById(userId, { session });
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
 
     const now = new Date();
-    const expiresAt = new Date(now);
-    expiresAt.setDate(expiresAt.getDate() + cycleConfig.validityDays);
 
-    return userRepository.updateById(userId, {
-      "subscription.plan": "pro",
-      "subscription.billingCycle": billingCycle,
-      "subscription.isActive": true,
-      "subscription.startsAt": now,
-      "subscription.expiresAt": expiresAt,
-      "subscription.razorpayPaymentId": razorpayPaymentId,
-      "subscription.razorpayOrderId": razorpayOrderId,
-      "usage.totalCredits": cycleConfig.totalCredits,
-      "usage.remainingCredits": cycleConfig.totalCredits,
-      "usage.dailyCreditsUsed": 0,
-      "usage.lastDailyReset": now,
-    });
+    const hasActivePro =
+      user.subscription.plan === "pro" &&
+      user.subscription.isActive &&
+      user.subscription.expiresAt &&
+      new Date(user.subscription.expiresAt) > now;
+
+    // An active Pro user receives an extension.
+    // A Free or expired user starts a fresh subscription.
+    const baseDate = hasActivePro ? new Date(user.subscription.expiresAt) : now;
+
+    const expiresAt = new Date(
+      baseDate.getTime() + validityDays * 24 * 60 * 60 * 1000,
+    );
+
+    const totalCredits = hasActivePro
+      ? user.usage.totalCredits + creditsGranted
+      : creditsGranted;
+
+    const remainingCredits = hasActivePro
+      ? user.usage.remainingCredits + creditsGranted
+      : creditsGranted;
+
+    const shouldResetDailyUsage = isNewDay(user.usage.lastDailyReset);
+
+    const updated = await userRepository.updateById(
+      userId,
+      {
+        "subscription.plan": "pro",
+        "subscription.billingCycle": billingCycle,
+        "subscription.isActive": true,
+
+        "subscription.startsAt": hasActivePro
+          ? user.subscription.startsAt
+          : now,
+
+        "subscription.expiresAt": expiresAt,
+
+        "subscription.razorpayPaymentId": razorpayPaymentId,
+
+        "subscription.razorpayOrderId": razorpayOrderId,
+
+        "usage.totalCredits": totalCredits,
+
+        "usage.remainingCredits": remainingCredits,
+
+        "usage.dailyCreditsUsed": shouldResetDailyUsage
+          ? 0
+          : user.usage.dailyCreditsUsed,
+
+        "usage.lastDailyReset": shouldResetDailyUsage
+          ? now
+          : user.usage.lastDailyReset,
+      },
+      { session },
+    );
+
+    if (!updated) {
+      throw new ApiError(404, "User not found while activating Pro");
+    }
+
+    return updated;
   },
 
   /**
