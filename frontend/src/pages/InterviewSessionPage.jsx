@@ -386,7 +386,7 @@
 
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useOutletContext } from 'react-router-dom'
 import { motion as Motion } from 'framer-motion'
 import { MdOutlineMic, MdOutlineMicOff } from 'react-icons/md'
 import LeftPanel from '../features/interview/session/LeftPanel.jsx'
@@ -396,6 +396,7 @@ import Spinner from '../components/ui/Spinner.jsx'
 import Button from '../components/ui/Button.jsx'
 import { ROUTES } from '../utils/constants.js'
 import useInterview from '../hooks/useInterview.js'
+import useInterviewFullscreen from '../hooks/useInterviewFullscreen.js'
 import useVoice from '../hooks/useVoice.js'
 import useWebcam from '../hooks/useWebcam.js'
 import useRecorder from "../hooks/useRecorder.js";
@@ -431,6 +432,14 @@ const appendText = (base, text) =>
 const InterviewSessionPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { exitRequested, cancelExit } = useOutletContext();
+  const {
+    isFullscreen,
+    hasEnteredFullscreen,
+    fullscreenError,
+    resumingFullscreen,
+    resumeFullscreen,
+  } = useInterviewFullscreen();
 
   const {
     currentQuestion,
@@ -463,6 +472,8 @@ const InterviewSessionPage = () => {
     isSupported: isRecorderSupported,
     startRecording,
     stopRecording,
+    pauseRecording,
+    resumeRecording,
   } = useRecorder();
 
   const {
@@ -475,7 +486,8 @@ const InterviewSessionPage = () => {
   } = useWebcam();
 
   const [answer, setAnswer] = useState("");
-  const [showAbandon, setShowAbandon] = useState(false);
+  const [localShowAbandon, setShowAbandon] = useState(false);
+  const [isAbandoning, setIsAbandoning] = useState(false);
   const [timerKey, setTimerKey] = useState(0);
   const [timerPaused, setTimerPaused] = useState(true);
   const [aiState, setAiState] = useState("idle");
@@ -484,10 +496,30 @@ const InterviewSessionPage = () => {
 
   const startTimeRef = useRef(null);
   const greetingSpokenRef = useRef(false);
+  const feedbackSpokenRef = useRef(null);
   const prevQuestionIndex = useRef(0);
   const abandonLoadingRef = useRef(false);
   const submitLockRef = useRef(false);
+  const pauseStartedRef = useRef(null);
   const isInactive = status === "interrupted" || status === "abandoned";
+  const showAbandon = localShowAbandon || exitRequested;
+  const fullscreenBlocked = !isFullscreen;
+  const sessionBlocked = fullscreenBlocked || showAbandon || isAbandoning;
+
+  useEffect(() => {
+    if (sessionBlocked) {
+      if (pauseStartedRef.current === null) pauseStartedRef.current = Date.now();
+      window.speechSynthesis?.pause();
+      pauseRecording();
+    } else {
+      if (pauseStartedRef.current !== null && startTimeRef.current !== null) {
+        startTimeRef.current += Date.now() - pauseStartedRef.current;
+      }
+      pauseStartedRef.current = null;
+      window.speechSynthesis?.resume();
+      resumeRecording();
+    }
+  }, [sessionBlocked, isRecording, pauseRecording, resumeRecording]);
 
   useEffect(() => {
     if (!isInactive) return;
@@ -498,15 +530,19 @@ const InterviewSessionPage = () => {
   // ── On mount ──────────────────────────────────────────────────
   useEffect(() => {
     requestWebcam();
-    if (!sessionId && id) fetchSession(id);
     return () => {
       stopWebcam();
       cancelSpeaking();
     };
-  }, []);
+  }, [requestWebcam, stopWebcam, cancelSpeaking]);
+
+  useEffect(() => {
+    if (!sessionId && id) fetchSession(id);
+  }, [sessionId, id, fetchSession]);
 
   // ── Speak greeting → reveal + speak Q1 ───────────────────────
   useEffect(() => {
+    if (sessionBlocked) return;
     if (!greeting || !currentQuestion) return;
     if (greetingSpokenRef.current) return;
     greetingSpokenRef.current = true;
@@ -538,11 +574,14 @@ const InterviewSessionPage = () => {
         prevQuestionIndex.current = currentQuestion.index;
       }, 1200);
     }
-  }, [greeting, currentQuestion?.index]);
+  }, [greeting, currentQuestion, sessionBlocked, isVoiceSupported, speak]);
 
   // ── Feedback arrives → speak → reveal next Q ─────────────────
   useEffect(() => {
+    if (sessionBlocked) return;
     if (!feedback?.text) return;
+    if (feedbackSpokenRef.current === feedback) return;
+    feedbackSpokenRef.current = feedback;
 
     setIsAwaitingNextQuestion(true);
     setTimerPaused(true);
@@ -562,10 +601,11 @@ const InterviewSessionPage = () => {
     } else {
       setTimeout(afterFeedback, 800);
     }
-  }, [feedback?.text]);
+  }, [feedback, sessionBlocked, isLastQuestion, isVoiceSupported, pendingNextQuestion, revealNextQuestion, speak]);
 
   // ── Question index changes → speak new question ───────────────
   useEffect(() => {
+    if (sessionBlocked) return;
     if (!currentQuestion) return;
     if (currentQuestion.index <= 1) return;
     if (currentQuestion.index === prevQuestionIndex.current) return;
@@ -584,7 +624,7 @@ const InterviewSessionPage = () => {
       setTimerPaused(false);
       startTimeRef.current = Date.now();
     });
-  }, [currentQuestion?.index]);
+  }, [currentQuestion, sessionBlocked, speak]);
 
   // ── AI state sync ─────────────────────────────────────────────
   useEffect(() => {
@@ -596,14 +636,14 @@ const InterviewSessionPage = () => {
 
   // ── Auto-end after last question ──────────────────────────────
   useEffect(() => {
-    if (!isLastQuestion || status !== "active") return;
+    if (!isLastQuestion || status !== "active" || sessionBlocked) return;
     const t = setTimeout(() => endInterview(), 3000);
     return () => clearTimeout(t);
-  }, [isLastQuestion, status]);
+  }, [isLastQuestion, status, sessionBlocked, endInterview]);
 
   // ── Handlers ──────────────────────────────────────────────────
   const handleTimeout = useCallback(async () => {
-    if (status !== "active" || submitLockRef.current) return;
+    if (status !== "active" || sessionBlocked || submitLockRef.current) return;
     submitLockRef.current = true;
 
     try {
@@ -633,10 +673,10 @@ const InterviewSessionPage = () => {
     } finally {
       submitLockRef.current = false;
     }
-  }, [answer, currentQuestion, status, isRecording, stopRecording, cancelSpeaking, submitAnswer]);
+  }, [answer, currentQuestion, status, sessionBlocked, stopRecording, cancelSpeaking, submitAnswer]);
 
   const handleSubmit = useCallback(async () => {
-    if (status !== "active" || isTranscribing || submitLockRef.current) return;
+    if (status !== "active" || sessionBlocked || isTranscribing || submitLockRef.current) return;
     submitLockRef.current = true;
 
     try {
@@ -666,7 +706,7 @@ const InterviewSessionPage = () => {
     } finally {
       submitLockRef.current = false;
     }
-  }, [answer, currentQuestion, status, isRecording, isTranscribing, stopRecording, cancelSpeaking, submitAnswer]);
+  }, [answer, currentQuestion, status, sessionBlocked, isTranscribing, stopRecording, cancelSpeaking, submitAnswer]);
 
   const handleStopRecording = useCallback(async () => {
     const text = await stopRecording();
@@ -674,15 +714,15 @@ const InterviewSessionPage = () => {
   }, [stopRecording]);
 
   const handleToggleMic = useCallback(() => {
-    if (isInactive) return;
+    if (isInactive || sessionBlocked) return;
     if (isRecording) handleStopRecording();
     else startRecording();
-  }, [isInactive, isRecording, handleStopRecording, startRecording]);
+  }, [isInactive, sessionBlocked, isRecording, handleStopRecording, startRecording]);
 
   const handleToggleWebcam = useCallback(() => {
     if (webcamEnabled) stopWebcam();
     else requestWebcam();
-  }, [webcamEnabled]);
+  }, [webcamEnabled, stopWebcam, requestWebcam]);
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -697,16 +737,26 @@ const InterviewSessionPage = () => {
   }, [status]);
 
   const handleAbandon = async () => {
+    if (abandonLoadingRef.current || submitLockRef.current) return;
     abandonLoadingRef.current = true;
-    stopWebcam();
-    cancelSpeaking();
-    await abandonInterview();
+    setIsAbandoning(true);
+    const ended = await abandonInterview();
+    if (!ended) {
+      abandonLoadingRef.current = false;
+      setIsAbandoning(false);
+    }
+  };
+
+  const handleCancelExit = async () => {
+    if (fullscreenBlocked && !(await resumeFullscreen())) return;
+    setShowAbandon(false);
+    cancelExit();
   };
 
   // ── Derived zone state ────────────────────────────────────────
   const zoneState = deriveZoneState({
     isAwaitingNextQuestion,
-    timerPaused,
+    timerPaused: timerPaused || sessionBlocked,
     status,
     isLastQuestion,
     feedback,
@@ -771,7 +821,7 @@ const InterviewSessionPage = () => {
       style={{ backgroundColor: "var(--color-bg)" }}
     >
       {/* ── LEFT PANEL — 40% ── */}
-      <div className="w-[40%] shrink-0 h-full hidden md:block">
+      <div className="w-[35%] shrink-0 h-full hidden md:block">
         <LeftPanel
           aiState={aiState}
           videoRef={videoRef}
@@ -862,7 +912,7 @@ const InterviewSessionPage = () => {
             totalQuestions={totalQuestions}
             timeLimit={currentQuestion?.timeLimitSeconds ?? 60}
             onTimeout={handleTimeout}
-            timerPaused={timerPaused || status !== "active"}
+            timerPaused={timerPaused || sessionBlocked || status !== "active"}
             timerKey={timerKey}
             currentQuestion={currentQuestion}
             questionVisible={questionVisible}
@@ -882,10 +932,22 @@ const InterviewSessionPage = () => {
 
       {/* Abandon modal */}
       <AbandonModal
-        open={showAbandon}
+        open={(showAbandon || fullscreenBlocked) && ["active", "submitting"].includes(status)}
         onConfirm={handleAbandon}
-        onCancel={() => setShowAbandon(false)}
-        loading={abandonLoadingRef.current}
+        onCancel={handleCancelExit}
+        loading={isAbandoning}
+        cancelLoading={resumingFullscreen}
+        confirmDisabled={status === "submitting" || isTranscribing || !sessionId}
+        title={fullscreenBlocked
+          ? (hasEnteredFullscreen ? "Exit Fullscreen and End Interview?" : "Fullscreen Required")
+          : "End Interview Early?"}
+        description={fullscreenBlocked
+          ? (hasEnteredFullscreen
+            ? "Your interview is paused. Cancel returns to fullscreen and continues your session. Confirm terminates the interview. Credits are refunded only if no answers were submitted."
+            : "Enter fullscreen to continue your interview, or Confirm to terminate it. Credits are refunded only if no answers were submitted.")
+          : undefined}
+        cancelLabel={fullscreenBlocked && !hasEnteredFullscreen ? "Enter fullscreen" : "Cancel"}
+        error={fullscreenBlocked ? fullscreenError : null}
       />
     </Motion.div>
   );

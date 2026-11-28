@@ -1,114 +1,30 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import {motion as Motion, AnimatePresence } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 import { HiSparkles } from "react-icons/hi2";
-import { MdOutlineClose, MdOutlineWarning } from "react-icons/md";
+import { MdOutlineClose } from "react-icons/md";
 import { HiArrowLeft } from "react-icons/hi";
 import { ROUTES } from "../../utils/constants.js";
-
-const WARN_ON_EXIT_ROUTES = ["/session"];
-
-const shouldWarnOnExit = (pathname) =>
-  WARN_ON_EXIT_ROUTES.some((r) => pathname.includes(r));
-
-const ExitWarningModal = ({ onConfirm, onCancel }) => (
-  <AnimatePresence>
-    <Motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
-    >
-      <Motion.div
-        initial={{ opacity: 0, scale: 0.92 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.92 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        className="w-full max-w-sm rounded-2xl p-6"
-        style={{
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-        }}
-      >
-        <div
-          className="w-12 h-12 rounded-full flex items-center justify-center
-            mb-4 mx-auto"
-          style={{
-            backgroundColor:
-              "color-mix(in srgb, var(--color-warning) 15%, transparent)",
-          }}
-        >
-          <MdOutlineWarning
-            size={24}
-            style={{ color: "var(--color-warning)" }}
-          />
-        </div>
-
-        <h3
-          className="text-lg font-bold text-center mb-2"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          Leave Interview?
-        </h3>
-        <p
-          className="text-sm text-center mb-6"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
-          Your interview is still in progress. Leaving now will abandon your
-          session. Credits will be refunded only if no answers were submitted.
-        </p>
-
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium
-              cursor-pointer transition-colors duration-200"
-            style={{
-              backgroundColor: "var(--color-surface-hover)",
-              color: "var(--color-text-primary)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            Stay
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium
-              cursor-pointer transition-colors duration-200 text-white"
-            style={{ backgroundColor: "var(--color-danger)" }}
-          >
-            Leave
-          </button>
-        </div>
-      </Motion.div>
-    </Motion.div>
-  </AnimatePresence>
-);
 
 const FocusLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [showWarning, setShowWarning] = useState(false);
+  const [exitPath, setExitPath] = useState(null);
+  const cancelExit = useCallback(() => setExitPath(null), []);
 
   const handleExit = () => {
-    if (shouldWarnOnExit(location.pathname)) {
-      setShowWarning(true);
+    if (location.pathname.endsWith("/session")) {
+      setExitPath(location.pathname);
     } else {
       navigate(ROUTES.DASHBOARD);
     }
-  };
-
-  const handleConfirmExit = () => {
-    setShowWarning(false);
-    navigate(ROUTES.DASHBOARD);
   };
 
   const isSessionPage = location.pathname.includes("/session");
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className={isSessionPage ? "h-dvh flex flex-col overflow-hidden" : "min-h-screen flex flex-col"}
       style={{ backgroundColor: "var(--color-bg)" }}
     >
       {/* Minimal top bar */}
@@ -191,19 +107,12 @@ const FocusLayout = () => {
       </Motion.header>
 
       {/* Page content — full width */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <Outlet />
+      <main className={isSessionPage ? "flex-1 min-h-0 overflow-hidden" : "flex-1 overflow-y-auto"}>
+        <div className={isSessionPage ? "h-full" : "max-w-4xl mx-auto px-4 py-6"}>
+          <Outlet context={{ exitRequested: exitPath === location.pathname, cancelExit }} />
         </div>
       </main>
 
-      {/* Exit warning modal */}
-      {showWarning && (
-        <ExitWarningModal
-          onConfirm={handleConfirmExit}
-          onCancel={() => setShowWarning(false)}
-        />
-      )}
     </div>
   );
 };

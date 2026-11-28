@@ -10,7 +10,9 @@ import { HiSparkles } from "react-icons/hi2";
 import Button from "../../../components/ui/Button.jsx";
 import { CREDIT_COSTS } from "../../../utils/constants.js";
 
-const SummaryRow = ({ icon: Icon, label, value, highlight }) => (
+const SummaryRow = ({ icon, label, value, highlight }) => {
+  const Icon = icon;
+  return (
   <div
     className="flex items-center justify-between py-3"
     style={{ borderBottom: "1px solid var(--color-border)" }}
@@ -31,7 +33,8 @@ const SummaryRow = ({ icon: Icon, label, value, highlight }) => (
       {value}
     </span>
   </div>
-);
+  );
+};
 
 const InterviewSummary = ({ settings, onStart, loading, isPro }) => {
   const {
@@ -144,6 +147,11 @@ const InterviewSummary = ({ settings, onStart, loading, isPro }) => {
             Questions auto-submit when time runs out
           </div>
         </div>
+
+        <p className="px-5 pb-4 text-xs text-text-secondary">
+          The interview opens in fullscreen. Exiting fullscreen pauses the session
+          and asks you to return or confirm termination.
+        </p>
 
         {/* Start button */}
         <div className="px-5 pb-5">
